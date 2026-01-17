@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" fill="none">
+  <!-- Stylized VL logo combining V and L shapes with a modern document/container feel -->
+  <rect x="4" y="4" width="40" height="40" rx="8" fill="currentColor" fill-opacity="0.1"/>
+  <path d="M14 14L24 30L34 14" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M24 30V36H34" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
