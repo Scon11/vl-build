@@ -71,6 +71,7 @@ export async function POST(request: NextRequest) {
     let llmOutput = null;
     let verificationWarnings: VerificationWarning[] = [];
     let normalizationMetadata = null;
+    let fieldProvenance = null;
     try {
       const verifiedResult = await classifyAndVerifyShipment({
         originalText: trimmedText,
@@ -80,12 +81,13 @@ export async function POST(request: NextRequest) {
       llmOutput = verifiedResult.shipment;
       verificationWarnings = verifiedResult.warnings;
       normalizationMetadata = verifiedResult.normalization;
+      fieldProvenance = verifiedResult.provenance;
     } catch (llmError) {
       console.error("LLM classification error:", llmError);
       // Continue without LLM output - human can still review raw candidates
     }
 
-    // 4. Store extraction run with LLM output, verification warnings, and normalization
+    // 4. Store extraction run with LLM output, verification warnings, provenance, and normalization
     const { error: extractionError } = await supabase
       .from("extraction_runs")
       .insert({
@@ -94,6 +96,7 @@ export async function POST(request: NextRequest) {
         metadata: {
           ...extractionResult.metadata,
           verification_warnings: verificationWarnings,
+          field_provenance: fieldProvenance,
           normalization: normalizationMetadata,
         },
         llm_output: llmOutput,

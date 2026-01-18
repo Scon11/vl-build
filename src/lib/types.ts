@@ -72,6 +72,10 @@ export interface ExtractionResult {
     version: string;
     customer_id?: string;
     applied_customer_rules?: number;
+    rules_applied_count?: number;
+    rules_skipped_count?: number;
+    rules_applied_details?: Array<{ rule: string; candidate: string; reason: string }>;
+    rules_skipped_reasons?: Array<{ rule: string; candidate: string; reason: string }>;
   };
 }
 
@@ -163,18 +167,72 @@ export interface StructuredShipment {
 }
 
 // ============================================
+// Provenance Types (Tracking where values come from)
+// ============================================
+
+/**
+ * Source type indicates where a value originated from.
+ * Used to determine whether a value can be flagged as "hallucinated".
+ */
+export type ProvenanceSourceType =
+  | "document_text"  // Value found directly in the source document
+  | "email_text"     // Value found in email text
+  | "rule"           // Value applied from customer rule (learned default)
+  | "user_edit"      // Value manually set by user
+  | "llm_inference"; // Value produced by LLM (only source that can be "hallucinated")
+
+/**
+ * Evidence record for a provenance entry.
+ */
+export interface ProvenanceEvidence {
+  match_text?: string;        // Exact substring found in source
+  char_start?: number;        // Start position in extracted text
+  char_end?: number;          // End position in extracted text
+  label?: string;             // Label found near match (e.g., "Total Lbs")
+  candidate_index?: number;   // Index in candidates array if matched
+}
+
+/**
+ * Provenance record for a single field value.
+ * Tracks where the value came from and how confident we are.
+ */
+export interface FieldProvenance {
+  source_type: ProvenanceSourceType;
+  confidence: number;         // 0-1, higher = more confident
+  evidence: ProvenanceEvidence[];
+  reason?: string;            // Short explanation (e.g., "customer cargo rule: temp -10 => Frozen Food")
+  applied_at?: string;        // ISO timestamp when this was set
+}
+
+/**
+ * Map of field paths to their provenance records.
+ * Field paths use dot notation: "cargo.commodity", "stops[0].location.city"
+ */
+export type FieldProvenanceMap = Record<string, FieldProvenance>;
+
+// ============================================
 // Verification Types (Post-LLM validation)
 // ============================================
 
+/**
+ * Warning category determines UI treatment:
+ * - "hallucinated": LLM produced value with no source support (yellow banner)
+ * - "unverified": Value extracted but evidence is weak (inline indicator only)
+ */
+export type WarningCategory = "hallucinated" | "unverified";
+
 export interface VerificationWarning {
-  path: string; // JSON path to the field, e.g., "reference_numbers[0].value"
-  value: string; // The unsupported value
-  reason: "unsupported_by_source";
+  path: string;                    // JSON path to the field
+  value: string;                   // The value in question
+  reason: "unsupported_by_source" | "weak_evidence" | "ambiguous_match";
+  category: WarningCategory;       // Determines UI severity
+  source_type?: ProvenanceSourceType; // Where the value came from
 }
 
 export interface VerifiedShipmentResult {
   shipment: StructuredShipment;
   warnings: VerificationWarning[];
+  provenance: FieldProvenanceMap;  // Provenance for all verified fields
   normalization?: NormalizationMetadata;
 }
 
@@ -193,9 +251,14 @@ export interface ExtractionMetadata {
   page_count?: number;
   word_count?: number;
   verification_warnings?: VerificationWarning[];
+  field_provenance?: FieldProvenanceMap;
   normalization?: NormalizationMetadata;
   customer_id?: string;
   applied_customer_rules?: number;
+  rules_applied_count?: number;
+  rules_skipped_count?: number;
+  rules_applied_details?: Array<{ rule: string; candidate: string; reason: string }>;
+  rules_skipped_reasons?: Array<{ rule: string; candidate: string; reason: string }>;
 }
 
 // ============================================
@@ -322,6 +385,7 @@ export interface LearningEvent {
     label_hint?: string;
     nearby_text?: string;
     temperature_value?: number;
+    temperature_mode?: "frozen" | "refrigerated" | "dry";
     original_subtype?: string;
   };
   created_at: string;

@@ -45,10 +45,53 @@ function getWarningForPath(
   return warnings.find((w) => w.path === path);
 }
 
-// Warning indicator component
+// Helper to filter warnings by category
+// Default to "hallucinated" for backward compatibility with old warnings
+function getWarningCategory(warning: VerificationWarning): "hallucinated" | "unverified" {
+  return warning.category ?? "hallucinated";
+}
+
+function getHallucinatedWarnings(warnings: VerificationWarning[]): VerificationWarning[] {
+  return warnings.filter((w) => getWarningCategory(w) === "hallucinated");
+}
+
+function getUnverifiedWarnings(warnings: VerificationWarning[]): VerificationWarning[] {
+  return warnings.filter((w) => getWarningCategory(w) === "unverified");
+}
+
+// Warning indicator component - shows different styles for hallucinated vs unverified
 function WarningIndicator({ warning }: { warning?: VerificationWarning }) {
   if (!warning) return null;
   
+  const isHallucinated = getWarningCategory(warning) === "hallucinated";
+  
+  // For unverified (weak evidence), show a subtler indicator
+  if (!isHallucinated) {
+    return (
+      <div className="group relative inline-flex items-center">
+        <svg
+          className="h-4 w-4 text-blue-400"
+          fill="none"
+          viewBox="0 0 24 24"
+          stroke="currentColor"
+        >
+          <path
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth={2}
+            d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
+          />
+        </svg>
+        <div className="absolute bottom-full left-1/2 z-50 mb-2 hidden w-max max-w-xs -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg group-hover:block">
+          <p className="font-medium">Low confidence</p>
+          <p className="opacity-80">Value: "{warning.value}"</p>
+          <p className="opacity-60 text-xs mt-1">May need manual verification</p>
+        </div>
+      </div>
+    );
+  }
+  
+  // For hallucinated values, show the warning triangle
   return (
     <div className="group relative inline-flex items-center">
       <svg
@@ -65,8 +108,9 @@ function WarningIndicator({ warning }: { warning?: VerificationWarning }) {
         />
       </svg>
       <div className="absolute bottom-full left-1/2 z-50 mb-2 hidden w-max max-w-xs -translate-x-1/2 rounded bg-gray-900 px-2 py-1 text-xs text-white shadow-lg group-hover:block">
-        <p className="font-medium">Unsupported by source</p>
-        <p className="opacity-80">Original value: "{warning.value}"</p>
+        <p className="font-medium">Potentially hallucinated</p>
+        <p className="opacity-80">Value: "{warning.value}"</p>
+        <p className="opacity-60 text-xs mt-1">Not found in source document</p>
       </div>
     </div>
   );
@@ -139,11 +183,13 @@ function EditableStopCard({
   stop,
   onChange,
   stopIndex,
+  typeIndex,
   warnings,
 }: {
   stop: Stop;
   onChange: (updated: Stop) => void;
   stopIndex: number;
+  typeIndex: number;
   warnings: VerificationWarning[];
 }) {
   const isPickup = stop.type === "pickup";
@@ -194,9 +240,10 @@ function EditableStopCard({
 
   return (
     <div className={`rounded-lg border border-l-4 ${borderColor} ${hasStopWarnings ? "border-yellow-400 bg-yellow-50/50 dark:bg-yellow-900/10" : "border-border bg-bg-secondary"} p-4`}>
+      {/* Stop header with type badge */}
       <div className="mb-3 flex items-center gap-2">
         <span className={`rounded px-2 py-0.5 text-xs font-bold ${typeBg}`}>
-          {typeLabel} #{stop.sequence}
+          {typeLabel} #{typeIndex}
         </span>
         {hasStopWarnings && (
           <span className="flex items-center gap-1 rounded bg-yellow-100 px-1.5 py-0.5 text-xs font-medium text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400">
@@ -206,20 +253,23 @@ function EditableStopCard({
             Needs review
           </span>
         )}
-        <div className="flex flex-1 items-center gap-1">
+      </div>
+
+      {/* Stacked Address Block */}
+      <div className="mb-3 space-y-2">
+        {/* Line 1: Facility Name */}
+        <div className="flex items-center gap-1">
           <input
             type="text"
             value={stop.location.name || ""}
             onChange={(e) => updateLocation("name", e.target.value)}
-            placeholder="Facility name"
-            className={`flex-1 rounded border bg-transparent px-2 py-1 text-sm font-medium text-text-primary placeholder:text-text-muted focus:outline-none ${getWarningForPath(warnings, `${pathPrefix}.location.name`) ? "border-yellow-400" : "border-transparent focus:border-border"}`}
+            placeholder="Facility / Company name"
+            className={`flex-1 rounded border bg-bg-input px-2 py-1.5 text-sm font-medium text-text-primary placeholder:text-text-muted focus:outline-none ${getWarningForPath(warnings, `${pathPrefix}.location.name`) ? "border-yellow-400" : "border-border focus:border-accent"}`}
           />
           <WarningIndicator warning={getWarningForPath(warnings, `${pathPrefix}.location.name`)} />
         </div>
-      </div>
 
-      {/* Location Fields */}
-      <div className="mb-3 grid gap-2 sm:grid-cols-2">
+        {/* Line 2: Street Address */}
         <div className="flex items-center gap-1">
           <input
             type="text"
@@ -230,18 +280,20 @@ function EditableStopCard({
           />
           <WarningIndicator warning={getWarningForPath(warnings, `${pathPrefix}.location.address`)} />
         </div>
-        <div className="flex gap-2">
-          <div className="flex flex-1 items-center gap-1">
+
+        {/* Line 3: City, State ZIP */}
+        <div className="flex flex-wrap items-center gap-2">
+          <div className="flex min-w-0 flex-1 items-center gap-1">
             <input
               type="text"
               value={stop.location.city || ""}
               onChange={(e) => updateLocation("city", e.target.value)}
               placeholder="City"
-              className={`flex-1 rounded border bg-bg-input px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none ${getWarningForPath(warnings, `${pathPrefix}.location.city`) ? "border-yellow-400" : "border-border focus:border-accent"}`}
+              className={`min-w-0 flex-1 rounded border bg-bg-input px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none ${getWarningForPath(warnings, `${pathPrefix}.location.city`) ? "border-yellow-400" : "border-border focus:border-accent"}`}
             />
             <WarningIndicator warning={getWarningForPath(warnings, `${pathPrefix}.location.city`)} />
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <input
               type="text"
               value={stop.location.state || ""}
@@ -251,7 +303,7 @@ function EditableStopCard({
             />
             <WarningIndicator warning={getWarningForPath(warnings, `${pathPrefix}.location.state`)} />
           </div>
-          <div className="flex items-center gap-1">
+          <div className="flex shrink-0 items-center gap-1">
             <input
               type="text"
               value={stop.location.zip || ""}
@@ -1151,38 +1203,54 @@ export default function ReviewPage() {
         </div>
       </header>
 
-      {/* Verification Warning Banner */}
-      {verificationWarnings.length > 0 && (
-        <div className="border-b border-yellow-300 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/30">
-          <div className="mx-auto max-w-6xl px-6 py-3">
-            <div className="flex items-center gap-3">
-              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow-200 dark:bg-yellow-800">
-                <svg
-                  className="h-5 w-5 text-yellow-700 dark:text-yellow-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
-                  />
-                </svg>
-              </div>
-              <div>
-                <p className="font-medium text-yellow-800 dark:text-yellow-300">
-                  {verificationWarnings.length} field{verificationWarnings.length !== 1 ? "s" : ""} may contain hallucinated data
-                </p>
-                <p className="text-sm text-yellow-700 dark:text-yellow-400">
-                  These values could not be verified against the source document. Please review the highlighted fields below.
-                </p>
+      {/* Hallucination Warning Banner - only shows for truly hallucinated values */}
+      {(() => {
+        const hallucinatedWarnings = getHallucinatedWarnings(verificationWarnings);
+        const unverifiedWarnings = getUnverifiedWarnings(verificationWarnings);
+        
+        if (hallucinatedWarnings.length === 0 && unverifiedWarnings.length === 0) {
+          return null;
+        }
+        
+        // Only show banner for hallucinated values (LLM invented without source support)
+        if (hallucinatedWarnings.length > 0) {
+          return (
+            <div className="border-b border-yellow-300 bg-yellow-50 dark:border-yellow-800 dark:bg-yellow-900/30">
+              <div className="mx-auto max-w-6xl px-6 py-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-yellow-200 dark:bg-yellow-800">
+                    <svg
+                      className="h-5 w-5 text-yellow-700 dark:text-yellow-400"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+                      />
+                    </svg>
+                  </div>
+                  <div>
+                    <p className="font-medium text-yellow-800 dark:text-yellow-300">
+                      {hallucinatedWarnings.length} field{hallucinatedWarnings.length !== 1 ? "s" : ""} may contain hallucinated data
+                    </p>
+                    <p className="text-sm text-yellow-700 dark:text-yellow-400">
+                      These values could not be verified against the source document. Please review the highlighted fields below.
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          );
+        }
+        
+        // For unverified-only warnings, show a subtler info banner (optional)
+        // Currently we just don't show a banner for unverified fields
+        return null;
+      })()}
 
       {/* Suggested Rules Panel */}
       {showRulesPanel && suggestedRules.length > 0 && selectedCustomerId && (
@@ -1373,15 +1441,26 @@ export default function ReviewPage() {
 
                 {/* Stops */}
                 <div className="space-y-4">
-                  {editedShipment.stops.map((stop, i) => (
-                    <EditableStopCard
-                      key={`stop-${i}`}
-                      stop={stop}
-                      onChange={(updated) => updateStop(i, updated)}
-                      stopIndex={i}
-                      warnings={verificationWarnings}
-                    />
-                  ))}
+                  {(() => {
+                    // Compute per-type indices for stop labeling
+                    let pickupCount = 0;
+                    let deliveryCount = 0;
+                    return editedShipment.stops.map((stop, i) => {
+                      const typeIndex = stop.type === "pickup" 
+                        ? ++pickupCount 
+                        : ++deliveryCount;
+                      return (
+                        <EditableStopCard
+                          key={`stop-${i}`}
+                          stop={stop}
+                          onChange={(updated) => updateStop(i, updated)}
+                          stopIndex={i}
+                          typeIndex={typeIndex}
+                          warnings={verificationWarnings}
+                        />
+                      );
+                    });
+                  })()}
                 </div>
 
                 {/* Cargo */}

@@ -1,5 +1,5 @@
 /**
- * Unit tests for the post-LLM verification layer
+ * Unit tests for the post-LLM verification layer with provenance tracking
  *
  * Test cases:
  * 1. Supported reference number (found in candidates)
@@ -7,13 +7,17 @@
  * 3. Supported address normalization (words found in original text)
  * 4. Unsupported time (hallucinated time not in source)
  * 5. Multi-stop references (multiple stops with mixed supported/unsupported refs)
+ * 6. Provenance tracking for verified fields
+ * 7. Rule-based values should not trigger hallucination warnings
+ * 8. Warning categories (hallucinated vs unverified)
  */
 
-import { verifyShipment } from "./verifier";
+import { verifyShipment, getHallucinatedWarnings, getUnverifiedWarnings } from "./verifier";
 import {
   StructuredShipment,
   ExtractedCandidate,
   VerifiedShipmentResult,
+  FieldProvenanceMap,
 } from "./types";
 
 // Helper to create a minimal valid shipment structure
@@ -43,7 +47,8 @@ function createBaseShipment(
 // Helper to create a candidate
 function createCandidate(
   value: string,
-  type: ExtractedCandidate["type"] = "reference_number"
+  type: ExtractedCandidate["type"] = "reference_number",
+  confidence: "high" | "medium" | "low" = "high"
 ): ExtractedCandidate {
   return {
     type,
@@ -51,7 +56,7 @@ function createCandidate(
     raw_match: value,
     label_hint: null,
     subtype: type === "reference_number" ? "unknown" : null,
-    confidence: "high",
+    confidence,
     position: { start: 0, end: value.length },
     context: `...${value}...`,
   };
@@ -73,9 +78,12 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      expect(result.warnings).toHaveLength(0);
+      expect(getHallucinatedWarnings(result.warnings)).toHaveLength(0);
       expect(result.shipment.reference_numbers[0].value).toBe("12345");
       expect(result.shipment.reference_numbers[0].type).toBe("reference");
+      // Provenance should be tracked
+      expect(result.provenance["reference_numbers[0].value"]).toBeDefined();
+      expect(result.provenance["reference_numbers[0].value"].source_type).toBe("document_text");
     });
 
     it("should pass through reference numbers found in original text", () => {
@@ -91,14 +99,14 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      expect(result.warnings).toHaveLength(0);
+      expect(getHallucinatedWarnings(result.warnings)).toHaveLength(0);
       expect(result.shipment.reference_numbers[0].value).toBe("9876543");
     });
   });
 
   // Test Case 2: Unsupported reference number (hallucinated)
   describe("unsupported reference number - hallucinated", () => {
-    it("should flag and mark as unknown when reference number is not in text or candidates", () => {
+    it("should flag with hallucinated category when reference number is not in text or candidates", () => {
       const originalText = "Load #12345 for delivery to Chicago";
       const candidates = [createCandidate("12345")];
       const shipment = createBaseShipment({
@@ -114,12 +122,13 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toEqual({
-        path: "reference_numbers[0].value",
-        value: "FAKE-99999",
-        reason: "unsupported_by_source",
-      });
+      const hallucinated = getHallucinatedWarnings(result.warnings);
+      expect(hallucinated).toHaveLength(1);
+      expect(hallucinated[0].path).toBe("reference_numbers[0].value");
+      expect(hallucinated[0].value).toBe("FAKE-99999");
+      expect(hallucinated[0].reason).toBe("unsupported_by_source");
+      expect(hallucinated[0].category).toBe("hallucinated");
+      
       // Should be marked as unknown
       expect(result.shipment.reference_numbers[0].type).toBe("unknown");
       // Valid one should remain unchanged
@@ -127,8 +136,6 @@ describe("verifyShipment", () => {
     });
 
     it("should accept values that contain the extracted candidate", () => {
-      // This tests that minor formatting differences (like dashes) are acceptable
-      // when the core value is present in candidates
       const originalText = "Reference: 1234567890";
       const candidates = [createCandidate("1234567890")];
       const shipment = createBaseShipment({
@@ -143,9 +150,7 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      // We allow this because the core value exists in candidates/text
-      // This supports common normalization (adding dashes, formatting)
-      expect(result.warnings).toHaveLength(0);
+      expect(getHallucinatedWarnings(result.warnings)).toHaveLength(0);
     });
 
     it("should reject values that share no overlap with source", () => {
@@ -163,8 +168,9 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0].value).toBe("COMPLETELY-DIFFERENT");
+      const hallucinated = getHallucinatedWarnings(result.warnings);
+      expect(hallucinated).toHaveLength(1);
+      expect(hallucinated[0].value).toBe("COMPLETELY-DIFFERENT");
     });
   });
 
@@ -203,12 +209,11 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      // Should accept because "123", "Main", "St" are all present
-      expect(result.warnings).toHaveLength(0);
+      expect(getHallucinatedWarnings(result.warnings)).toHaveLength(0);
       expect(result.shipment.stops[0].location.address).toBe("123 Main St");
     });
 
-    it("should flag completely fabricated addresses", () => {
+    it("should flag completely fabricated addresses as hallucinated", () => {
       const originalText = "Pickup at 123 Main Street, Chicago, IL 60601.";
       const candidates = [createCandidate("123 Main Street", "address")];
       const shipment = createBaseShipment({
@@ -237,12 +242,14 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      expect(result.warnings.length).toBeGreaterThan(0);
-      const addressWarning = result.warnings.find((w) =>
+      const hallucinated = getHallucinatedWarnings(result.warnings);
+      expect(hallucinated.length).toBeGreaterThan(0);
+      const addressWarning = hallucinated.find((w) =>
         w.path.includes("address")
       );
       expect(addressWarning).toBeDefined();
       expect(addressWarning?.value).toBe("999 Fake Boulevard");
+      expect(addressWarning?.category).toBe("hallucinated");
       // Address should be nulled out
       expect(result.shipment.stops[0].location.address).toBeNull();
     });
@@ -250,7 +257,7 @@ describe("verifyShipment", () => {
 
   // Test Case 4: Unsupported time (hallucinated)
   describe("unsupported time - hallucinated", () => {
-    it("should flag times not found in source", () => {
+    it("should flag times not found in source with hallucinated category", () => {
       const originalText = "Pickup scheduled for 01/15/2026 at 8:00 AM";
       const candidates = [
         createCandidate("01/15/2026", "date"),
@@ -286,12 +293,12 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toEqual({
-        path: "stops[0].schedule.time",
-        value: "14:30",
-        reason: "unsupported_by_source",
-      });
+      const hallucinated = getHallucinatedWarnings(result.warnings);
+      expect(hallucinated).toHaveLength(1);
+      expect(hallucinated[0].path).toBe("stops[0].schedule.time");
+      expect(hallucinated[0].value).toBe("14:30");
+      expect(hallucinated[0].category).toBe("hallucinated");
+      
       // Time should be nulled
       expect(result.shipment.stops[0].schedule.time).toBeNull();
       // Date should remain valid
@@ -334,7 +341,7 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      expect(result.warnings).toHaveLength(0);
+      expect(getHallucinatedWarnings(result.warnings)).toHaveLength(0);
     });
   });
 
@@ -413,29 +420,19 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      // Should only have 1 warning for the fake reference
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0]).toEqual({
-        path: "stops[1].reference_numbers[1].value",
-        value: "FAKE-REF",
-        reason: "unsupported_by_source",
-      });
+      const hallucinated = getHallucinatedWarnings(result.warnings);
+      expect(hallucinated).toHaveLength(1);
+      expect(hallucinated[0].path).toBe("stops[1].reference_numbers[1].value");
+      expect(hallucinated[0].value).toBe("FAKE-REF");
+      expect(hallucinated[0].category).toBe("hallucinated");
 
       // Valid references should be unchanged
-      expect(result.shipment.stops[0].reference_numbers[0].value).toBe(
-        "111111"
-      );
-      expect(result.shipment.stops[1].reference_numbers[0].value).toBe(
-        "222222"
-      );
-      expect(result.shipment.stops[2].reference_numbers[0].value).toBe(
-        "333333"
-      );
+      expect(result.shipment.stops[0].reference_numbers[0].value).toBe("111111");
+      expect(result.shipment.stops[1].reference_numbers[0].value).toBe("222222");
+      expect(result.shipment.stops[2].reference_numbers[0].value).toBe("333333");
 
       // Invalid reference should be marked as unknown
-      expect(result.shipment.stops[1].reference_numbers[1].type).toBe(
-        "unknown"
-      );
+      expect(result.shipment.stops[1].reference_numbers[1].type).toBe("unknown");
     });
 
     it("should handle empty stops array", () => {
@@ -456,7 +453,164 @@ describe("verifyShipment", () => {
     });
   });
 
-  // Additional edge cases
+  // Test Case 6: Provenance tracking
+  describe("provenance tracking", () => {
+    it("should create provenance records for verified fields", () => {
+      const originalText = "Load #12345, Weight: 45000 lbs";
+      const candidates = [
+        createCandidate("12345"),
+        createCandidate("45000", "weight"),
+      ];
+      const shipment = createBaseShipment({
+        reference_numbers: [{ type: "bol", value: "12345" }],
+        cargo: {
+          weight: { value: 45000, unit: "lbs" },
+          pieces: { count: null, type: null },
+          dimensions: null,
+          commodity: null,
+          temperature: null,
+        },
+      });
+
+      const result = verifyShipment({
+        shipment,
+        candidates,
+        originalText,
+      });
+
+      // Check provenance for reference number
+      const refProvenance = result.provenance["reference_numbers[0].value"];
+      expect(refProvenance).toBeDefined();
+      expect(refProvenance.source_type).toBe("document_text");
+      expect(refProvenance.confidence).toBeGreaterThan(0);
+      expect(refProvenance.evidence.length).toBeGreaterThan(0);
+
+      // Check provenance for weight
+      const weightProvenance = result.provenance["cargo.weight.value"];
+      expect(weightProvenance).toBeDefined();
+      expect(weightProvenance.source_type).toBe("document_text");
+    });
+
+    it("should preserve existing rule-based provenance", () => {
+      const originalText = "Temperature: -10°F";
+      const candidates = [createCandidate("-10", "temperature")];
+      const shipment = createBaseShipment({
+        cargo: {
+          weight: { value: null, unit: null },
+          pieces: { count: null, type: null },
+          dimensions: null,
+          commodity: "Frozen Food", // This came from a customer rule
+          temperature: { value: -10, unit: "F", mode: "frozen" },
+        },
+      });
+
+      // Pre-existing provenance from cargo defaults
+      const existingProvenance: FieldProvenanceMap = {
+        "cargo.commodity": {
+          source_type: "rule",
+          confidence: 0.9,
+          evidence: [],
+          reason: "customer cargo rule: temp -10 => Frozen Food",
+          applied_at: new Date().toISOString(),
+        },
+      };
+
+      const result = verifyShipment({
+        shipment,
+        candidates,
+        originalText,
+        existingProvenance,
+      });
+
+      // Commodity should NOT be flagged as hallucinated because it has rule-based provenance
+      const hallucinated = getHallucinatedWarnings(result.warnings);
+      expect(hallucinated).toHaveLength(0);
+      
+      // Commodity should remain unchanged
+      expect(result.shipment.cargo.commodity).toBe("Frozen Food");
+      
+      // Provenance should be preserved
+      expect(result.provenance["cargo.commodity"].source_type).toBe("rule");
+    });
+  });
+
+  // Test Case 7: Rule-based values
+  describe("rule-based values", () => {
+    it("should never flag rule-based values as hallucinated", () => {
+      const originalText = "Weight: 45000 lbs, Temperature: -10°F";
+      const candidates = [
+        createCandidate("45000", "weight"),
+        createCandidate("-10", "temperature"),
+      ];
+      const shipment = createBaseShipment({
+        cargo: {
+          weight: { value: 45000, unit: "lbs" },
+          pieces: { count: null, type: null },
+          dimensions: null,
+          commodity: "Frozen Food", // From customer rule
+          temperature: { value: -10, unit: "F", mode: "frozen" },
+        },
+      });
+
+      const existingProvenance: FieldProvenanceMap = {
+        "cargo.commodity": {
+          source_type: "rule",
+          confidence: 0.9,
+          evidence: [],
+          reason: "customer cargo rule",
+        },
+        "cargo.temperature.mode": {
+          source_type: "rule",
+          confidence: 0.85,
+          evidence: [],
+          reason: "customer default temp mode",
+        },
+      };
+
+      const result = verifyShipment({
+        shipment,
+        candidates,
+        originalText,
+        existingProvenance,
+      });
+
+      // No hallucination warnings for rule-based values
+      const hallucinated = getHallucinatedWarnings(result.warnings);
+      expect(hallucinated).toHaveLength(0);
+
+      // Values should remain
+      expect(result.shipment.cargo.commodity).toBe("Frozen Food");
+    });
+  });
+
+  // Test Case 8: Warning categories
+  describe("warning categories", () => {
+    it("should correctly categorize hallucinated vs unverified warnings", () => {
+      const originalText = "Reference: 1234567890";
+      const candidates = [createCandidate("1234567890")];
+      const shipment = createBaseShipment({
+        reference_numbers: [
+          { type: "reference", value: "INVENTED-VALUE" }, // No source - hallucinated
+        ],
+      });
+
+      const result = verifyShipment({
+        shipment,
+        candidates,
+        originalText,
+      });
+
+      const hallucinated = getHallucinatedWarnings(result.warnings);
+      const unverified = getUnverifiedWarnings(result.warnings);
+
+      // INVENTED-VALUE should be hallucinated
+      expect(hallucinated).toHaveLength(1);
+      expect(hallucinated[0].value).toBe("INVENTED-VALUE");
+      expect(hallucinated[0].category).toBe("hallucinated");
+    });
+  });
+
+  // Edge cases
   describe("edge cases", () => {
     it("should handle null values gracefully", () => {
       const originalText = "Some tender text";
@@ -480,7 +634,7 @@ describe("verifyShipment", () => {
       expect(result.warnings).toHaveLength(0);
     });
 
-    it("should verify cargo fields", () => {
+    it("should verify cargo fields and flag hallucinated commodity", () => {
       const originalText = "Weight: 45000 lbs, 10 pallets of frozen goods";
       const candidates = [
         createCandidate("45000", "weight"),
@@ -502,9 +656,11 @@ describe("verifyShipment", () => {
         originalText,
       });
 
-      // Commodity should be flagged
-      expect(result.warnings).toHaveLength(1);
-      expect(result.warnings[0].path).toBe("cargo.commodity");
+      // Commodity should be flagged as hallucinated
+      const hallucinated = getHallucinatedWarnings(result.warnings);
+      expect(hallucinated).toHaveLength(1);
+      expect(hallucinated[0].path).toBe("cargo.commodity");
+      expect(hallucinated[0].category).toBe("hallucinated");
       expect(result.shipment.cargo.commodity).toBeNull();
 
       // Valid fields should remain

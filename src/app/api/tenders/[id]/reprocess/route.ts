@@ -94,6 +94,7 @@ export async function POST(
     let llmOutput = null;
     let verificationWarnings: VerificationWarning[] = [];
     let normalizationMetadata = null;
+    let fieldProvenance = null;
 
     try {
       const verifiedResult = await classifyAndVerifyShipment({
@@ -104,6 +105,7 @@ export async function POST(
       llmOutput = verifiedResult.shipment;
       verificationWarnings = verifiedResult.warnings;
       normalizationMetadata = verifiedResult.normalization;
+      fieldProvenance = verifiedResult.provenance;
       
       console.log(`[Reprocess] Classification complete`);
     } catch (llmError) {
@@ -125,6 +127,7 @@ export async function POST(
       ...extractionResult.metadata,
       ...preservedFileMetadata, // Preserve file_name, file_type, page_count, word_count
       verification_warnings: verificationWarnings,
+      field_provenance: fieldProvenance,
       normalization: normalizationMetadata,
       reprocessed_at: new Date().toISOString(),
       reprocessed_with_customer: customer_id,

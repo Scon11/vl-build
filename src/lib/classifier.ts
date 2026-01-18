@@ -5,6 +5,8 @@ import {
   VerifiedShipmentResult,
   CustomerProfile,
   NormalizationMetadata,
+  FieldProvenanceMap,
+  FieldProvenance,
 } from "./types";
 import { verifyShipment } from "./verifier";
 import { normalizeShipment } from "./normalizer";
@@ -308,14 +310,22 @@ Please structure this into a shipment schema. Remember: use null for any field n
   return result;
 }
 
+interface CargoDefaultsResult {
+  shipment: StructuredShipment;
+  provenance: FieldProvenanceMap;
+}
+
 /**
  * Apply learned cargo defaults from customer profile.
  * This is a deterministic step that fills in blank cargo fields based on learned rules.
+ * Returns both the updated shipment and provenance records for applied values.
  */
 function applyCargoDefaults(
   shipment: StructuredShipment,
   customerProfile?: CustomerProfile | null
-): StructuredShipment {
+): CargoDefaultsResult {
+  const provenance: FieldProvenanceMap = {};
+  
   console.log(`[CargoDefaults] applyCargoDefaults called`);
   console.log(`[CargoDefaults]   customerProfile: ${customerProfile?.name ?? "null"}`);
   console.log(`[CargoDefaults]   cargo_hints: ${JSON.stringify(customerProfile?.cargo_hints)}`);
@@ -324,7 +334,7 @@ function applyCargoDefaults(
   
   if (!customerProfile?.cargo_hints) {
     console.log(`[CargoDefaults] No cargo hints, returning unchanged`);
-    return shipment;
+    return { shipment, provenance };
   }
 
   const hints = customerProfile.cargo_hints;
@@ -365,6 +375,17 @@ function applyCargoDefaults(
     if (learnedCommodity) {
       cargo.commodity = learnedCommodity;
       applied = true;
+      
+      // Create provenance record for this rule-applied value
+      const ruleReason = `customer cargo rule: temp ${temp ?? mode ?? "unknown"} => ${learnedCommodity}`;
+      provenance["cargo.commodity"] = {
+        source_type: "rule",
+        confidence: 0.9,
+        evidence: [],
+        reason: ruleReason,
+        applied_at: new Date().toISOString(),
+      };
+      
       console.log(`[CargoDefaults] Applied ${category} commodity: "${cargo.commodity}" (temp: ${temp ?? "N/A"}, mode: ${mode ?? "N/A"})`);
     }
   }
@@ -373,6 +394,15 @@ function applyCargoDefaults(
   if (!cargo.commodity && hints.default_commodity) {
     cargo.commodity = hints.default_commodity;
     applied = true;
+    
+    provenance["cargo.commodity"] = {
+      source_type: "rule",
+      confidence: 0.85,
+      evidence: [],
+      reason: `customer default commodity: ${hints.default_commodity}`,
+      applied_at: new Date().toISOString(),
+    };
+    
     console.log(`[CargoDefaults] Applied default commodity: "${cargo.commodity}"`);
   }
 
@@ -380,14 +410,23 @@ function applyCargoDefaults(
   if (!cargo.temperature?.mode && hints.default_temp_mode && cargo.temperature) {
     cargo.temperature = { ...cargo.temperature, mode: hints.default_temp_mode };
     applied = true;
+    
+    provenance["cargo.temperature.mode"] = {
+      source_type: "rule",
+      confidence: 0.85,
+      evidence: [],
+      reason: `customer default temp mode: ${hints.default_temp_mode}`,
+      applied_at: new Date().toISOString(),
+    };
+    
     console.log(`[CargoDefaults] Applied default temp mode: "${hints.default_temp_mode}"`);
   }
 
   if (applied) {
-    return { ...shipment, cargo };
+    return { shipment: { ...shipment, cargo }, provenance };
   }
 
-  return shipment;
+  return { shipment, provenance };
 }
 
 /**
@@ -404,7 +443,7 @@ export async function classifyAndVerifyShipment(
 
   // Normalize to properly scope refs to stops vs shipment-level
   const normalizationResult = normalizeShipment(rawShipment, originalText, candidates);
-  let normalizedShipment = normalizationResult.shipment;
+  const normalizedShipment = normalizationResult.shipment;
 
   console.log(
     `[Normalization] Moved ${normalizationResult.metadata.refs_moved_to_stops} refs to stops, ` +
@@ -422,11 +461,26 @@ export async function classifyAndVerifyShipment(
 
   // Apply learned cargo defaults from customer profile AFTER verification
   // This way the verifier won't reject values that come from learned rules
-  const finalShipment = applyCargoDefaults(verificationResult.shipment, customerProfile);
+  const cargoDefaultsResult = applyCargoDefaults(verificationResult.shipment, customerProfile);
+
+  // Merge provenance: rule-based provenance takes precedence
+  const mergedProvenance = {
+    ...verificationResult.provenance,
+    ...cargoDefaultsResult.provenance,
+  };
+
+  // Filter out warnings for fields that now have rule-based provenance
+  // (cargo defaults applied from customer rules should not show hallucination warnings)
+  const filteredWarnings = verificationResult.warnings.filter((w) => {
+    const fieldProvenance = mergedProvenance[w.path];
+    // Keep warning only if there's no rule-based provenance for this field
+    return !fieldProvenance || fieldProvenance.source_type === "llm_inference";
+  });
 
   return {
-    shipment: finalShipment,
-    warnings: verificationResult.warnings,
+    shipment: cargoDefaultsResult.shipment,
+    warnings: filteredWarnings,
+    provenance: mergedProvenance,
     normalization: normalizationResult.metadata,
   };
 }

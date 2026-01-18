@@ -120,6 +120,7 @@ export async function POST(request: NextRequest) {
     let llmOutput = null;
     let verificationWarnings: VerificationWarning[] = [];
     let normalizationMetadata = null;
+    let fieldProvenance = null;
     try {
       const verifiedResult = await classifyAndVerifyShipment({
         originalText: extractedText,
@@ -129,6 +130,7 @@ export async function POST(request: NextRequest) {
       llmOutput = verifiedResult.shipment;
       verificationWarnings = verifiedResult.warnings;
       normalizationMetadata = verifiedResult.normalization;
+      fieldProvenance = verifiedResult.provenance;
     } catch (llmError) {
       console.error("LLM classification error:", llmError);
       // Continue without LLM output
@@ -141,7 +143,7 @@ export async function POST(request: NextRequest) {
       console.log(`[Upload] WARNING: llm_output has NO commodity before saving!`);
     }
 
-    // 5. Store extraction run with verification warnings and normalization metadata
+    // 5. Store extraction run with verification warnings, provenance, and normalization metadata
     const { error: extractionError } = await supabase
       .from("extraction_runs")
       .insert({
@@ -154,6 +156,7 @@ export async function POST(request: NextRequest) {
           page_count: parseMetadata.page_count,
           word_count: parseMetadata.word_count,
           verification_warnings: verificationWarnings,
+          field_provenance: fieldProvenance,
           normalization: normalizationMetadata,
         },
         llm_output: llmOutput,
