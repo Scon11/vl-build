@@ -7,6 +7,7 @@ import { CustomerSelector } from "./CustomerSelector";
 type SubmitState = "idle" | "submitting" | "error";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const BATCH_MAX_FILES = parseInt(process.env.NEXT_PUBLIC_BATCH_MAX_FILES || "10", 10);
 const VALID_EXTENSIONS = [".pdf", ".docx", ".txt"];
 const VALID_TYPES = [
   "application/pdf",
@@ -20,24 +21,22 @@ export function TenderComposer() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [text, setText] = useState("");
-  const [attachedFile, setAttachedFile] = useState<File | null>(null);
+  const [attachedFiles, setAttachedFiles] = useState<File[]>([]);
   const [submitState, setSubmitState] = useState<SubmitState>("idle");
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [selectedCustomerId, setSelectedCustomerId] = useState<string | null>(null);
+  const [batchProgress, setBatchProgress] = useState<string | null>(null);
 
   // Auto-resize textarea
   useEffect(() => {
     const textarea = textareaRef.current;
     if (!textarea) return;
 
-    // Reset height to calculate new height
     textarea.style.height = "auto";
-    // Set to scrollHeight but cap at max
     const maxHeight = 260;
     const newHeight = Math.min(textarea.scrollHeight, maxHeight);
     textarea.style.height = `${newHeight}px`;
-    // Enable scroll if content exceeds max height
     textarea.style.overflowY = textarea.scrollHeight > maxHeight ? "auto" : "hidden";
   }, [text]);
 
@@ -58,13 +57,26 @@ export function TenderComposer() {
     return { valid: true };
   }, []);
 
-  const handleFileAttach = useCallback((file: File) => {
-    const validation = isValidFile(file);
-    if (!validation.valid) {
-      setErrorMessage(validation.error || "Invalid file");
+  // Handle file selection from paperclip (supports single or multiple)
+  const handleFileSelect = useCallback((files: FileList | File[]) => {
+    const fileArray = Array.from(files);
+    if (fileArray.length === 0) return;
+
+    if (fileArray.length > BATCH_MAX_FILES) {
+      setErrorMessage(`Too many files. Maximum is ${BATCH_MAX_FILES} files per batch.`);
       return;
     }
-    setAttachedFile(file);
+
+    // Validate all files
+    for (const file of fileArray) {
+      const validation = isValidFile(file);
+      if (!validation.valid) {
+        setErrorMessage(`${file.name}: ${validation.error}`);
+        return;
+      }
+    }
+
+    setAttachedFiles(fileArray);
     setErrorMessage(null);
   }, [isValidFile]);
 
@@ -72,18 +84,18 @@ export function TenderComposer() {
     fileInputRef.current?.click();
   };
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      handleFileAttach(file);
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
+      handleFileSelect(e.target.files);
     }
-    // Reset input so the same file can be selected again
+    // Reset input so the same file(s) can be selected again
     e.target.value = "";
   };
 
-  const removeAttachment = () => {
-    setAttachedFile(null);
+  const removeAttachments = () => {
+    setAttachedFiles([]);
     setErrorMessage(null);
+    setBatchProgress(null);
   };
 
   // Drag and drop handlers
@@ -102,11 +114,11 @@ export function TenderComposer() {
     e.stopPropagation();
     setDragActive(false);
 
-    const file = e.dataTransfer.files?.[0];
-    if (file) {
-      handleFileAttach(file);
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      handleFileSelect(files);
     }
-  }, [handleFileAttach]);
+  }, [handleFileSelect]);
 
   // Keyboard handling: Ctrl/Cmd+Enter to submit
   const handleKeyDown = (e: KeyboardEvent<HTMLTextAreaElement>) => {
@@ -118,7 +130,7 @@ export function TenderComposer() {
 
   const canSubmit = () => {
     if (submitState === "submitting") return false;
-    return attachedFile !== null || text.trim().length > 0;
+    return attachedFiles.length > 0 || text.trim().length > 0;
   };
 
   const handleSubmit = async () => {
@@ -126,35 +138,82 @@ export function TenderComposer() {
 
     setSubmitState("submitting");
     setErrorMessage(null);
+    setBatchProgress(null);
 
     try {
-      let response: Response;
-
-      if (attachedFile) {
-        // File mode: upload via FormData
+      // Batch upload mode (multiple files)
+      if (attachedFiles.length > 1) {
+        setBatchProgress(`Processing ${attachedFiles.length} files...`);
+        
         const formData = new FormData();
-        formData.append("file", attachedFile);
-        // Include customer_id if selected
+        for (const file of attachedFiles) {
+          formData.append("files", file);
+        }
         if (selectedCustomerId) {
           formData.append("customer_id", selectedCustomerId);
         }
 
-        response = await fetch("/api/tenders/upload", {
+        const response = await fetch("/api/tenders/batch-upload", {
           method: "POST",
           body: formData,
         });
-      } else {
-        // Text mode: submit JSON
-        response = await fetch("/api/tenders", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            source_type: "paste",
-            original_text: text.trim(),
-            customer_id: selectedCustomerId, // Include customer_id
-          }),
-        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to process batch");
+        }
+
+        setBatchProgress(null);
+        
+        // Navigate to batch review page
+        if (data.first_tender_id) {
+          router.push(`/tenders/batch/${data.batch_id}/review`);
+        } else {
+          // All items failed - show completion page
+          router.push(`/tenders/batch/${data.batch_id}/complete`);
+        }
+        return;
       }
+
+      // Single file mode
+      if (attachedFiles.length === 1) {
+        const formData = new FormData();
+        formData.append("file", attachedFiles[0]);
+        if (selectedCustomerId) {
+          formData.append("customer_id", selectedCustomerId);
+        }
+
+        const response = await fetch("/api/tenders/upload", {
+          method: "POST",
+          body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error(data.error || "Failed to process tender");
+        }
+
+        // Navigate to review page (with duplicate flag if dedupe matched)
+        if (data.deduped) {
+          router.push(`/tenders/${data.id}/review?duplicate=true`);
+        } else {
+          router.push(`/tenders/${data.id}/review`);
+        }
+        return;
+      }
+
+      // Text paste mode
+      const response = await fetch("/api/tenders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source_type: "paste",
+          original_text: text.trim(),
+          customer_id: selectedCustomerId,
+        }),
+      });
 
       const data = await response.json();
 
@@ -162,11 +221,16 @@ export function TenderComposer() {
         throw new Error(data.error || "Failed to process tender");
       }
 
-      // Navigate to review page
-      router.push(`/tenders/${data.id}/review`);
+      // Navigate to review page (with duplicate flag if dedupe matched)
+      if (data.deduped) {
+        router.push(`/tenders/${data.id}/review?duplicate=true`);
+      } else {
+        router.push(`/tenders/${data.id}/review`);
+      }
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "An error occurred");
       setSubmitState("error");
+      setBatchProgress(null);
     }
   };
 
@@ -176,6 +240,8 @@ export function TenderComposer() {
     return (bytes / (1024 * 1024)).toFixed(1) + " MB";
   };
 
+  const isBatchMode = attachedFiles.length > 1;
+
   return (
     <div
       className="relative flex flex-col items-center w-full max-w-2xl mx-auto px-4"
@@ -184,17 +250,40 @@ export function TenderComposer() {
       onDragOver={handleDrag}
       onDrop={handleDrop}
     >
-      {/* Customer selector - above the input bar */}
-      <div className="w-full mb-3">
-        <CustomerSelector
-          selectedCustomerId={selectedCustomerId}
-          onSelect={setSelectedCustomerId}
-          className="w-full"
-        />
-      </div>
+      {/* Batch files display (multiple files) */}
+      {isBatchMode && (
+        <div className="w-full mb-2">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium text-text-primary">
+              Batch Upload: {attachedFiles.length} files
+            </span>
+            <button
+              onClick={removeAttachments}
+              disabled={submitState === "submitting"}
+              className="text-xs text-text-muted hover:text-error transition-colors"
+            >
+              Clear all
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {attachedFiles.map((file, idx) => (
+              <div
+                key={idx}
+                className="inline-flex items-center gap-1 px-2 py-1 bg-bg-secondary border border-border rounded text-xs"
+              >
+                <span className="truncate max-w-[120px]">{file.name}</span>
+                <span className="text-text-muted">({formatFileSize(file.size)})</span>
+              </div>
+            ))}
+          </div>
+          {batchProgress && (
+            <p className="mt-2 text-sm text-accent">{batchProgress}</p>
+          )}
+        </div>
+      )}
 
-      {/* File attachment chip */}
-      {attachedFile && (
+      {/* Single file attachment chip */}
+      {attachedFiles.length === 1 && (
         <div className="w-full mb-2">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-bg-secondary border border-border rounded-full text-sm">
             <svg
@@ -211,13 +300,13 @@ export function TenderComposer() {
               />
             </svg>
             <span className="text-text-primary truncate max-w-[200px]">
-              {attachedFile.name}
+              {attachedFiles[0].name}
             </span>
             <span className="text-text-muted">
-              ({formatFileSize(attachedFile.size)})
+              ({formatFileSize(attachedFiles[0].size)})
             </span>
             <button
-              onClick={removeAttachment}
+              onClick={removeAttachments}
               disabled={submitState === "submitting"}
               className="p-0.5 rounded hover:bg-bg-input text-text-muted hover:text-text-primary transition-colors"
               aria-label="Remove attachment"
@@ -258,12 +347,13 @@ export function TenderComposer() {
           ${submitState === "submitting" ? "opacity-70" : ""}
         `}
       >
-        {/* Paperclip button */}
+        {/* Paperclip button - opens file picker with multi-select */}
         <button
           onClick={handlePaperclipClick}
           disabled={submitState === "submitting"}
           className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-input transition-colors shrink-0 disabled:opacity-50"
-          aria-label="Attach file"
+          aria-label="Attach files"
+          title="Attach files (select multiple with Ctrl/Cmd)"
         >
           <svg
             className="w-5 h-5"
@@ -280,12 +370,13 @@ export function TenderComposer() {
           </svg>
         </button>
 
-        {/* Hidden file input */}
+        {/* Hidden file input with multiple support */}
         <input
           ref={fileInputRef}
           type="file"
           accept=".pdf,.docx,.txt"
-          onChange={handleFileSelect}
+          multiple
+          onChange={handleInputChange}
           className="hidden"
           aria-hidden="true"
         />
@@ -351,10 +442,14 @@ export function TenderComposer() {
         </button>
       </div>
 
-      {/* Helper text */}
-      <p className="mt-2 text-xs text-text-muted">
-        Press <kbd className="px-1 py-0.5 bg-bg-input rounded text-[10px]">Ctrl</kbd>+<kbd className="px-1 py-0.5 bg-bg-input rounded text-[10px]">Enter</kbd> to submit • PDF, DOCX, TXT up to 10MB
-      </p>
+      {/* Customer selector - below the input bar, narrower and centered */}
+      <div className="w-full sm:w-2/3 max-w-md mt-4 mx-auto">
+        <CustomerSelector
+          selectedCustomerId={selectedCustomerId}
+          onSelect={setSelectedCustomerId}
+          className="w-full"
+        />
+      </div>
 
       {/* Error message */}
       {errorMessage && (

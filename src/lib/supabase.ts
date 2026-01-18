@@ -1,19 +1,16 @@
-import { createClient } from "@supabase/supabase-js";
+/**
+ * @deprecated Use the new modular imports:
+ * - Server auth: import { createClient } from "@/lib/supabase/server"
+ * - Service role: import { createServiceClient } from "@/lib/supabase/service"
+ * - Browser: import { createClient } from "@/lib/supabase/browser"
+ */
 
-// Server-side Supabase client with service role key
-// Use this ONLY in API routes / server components - never expose to client
+import { createServiceClient } from "./supabase/service";
+
+/**
+ * @deprecated Use createServiceClient from "@/lib/supabase/service" instead.
+ * Kept for backwards compatibility with existing API routes.
+ */
 export function createServerClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
-
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error("Missing Supabase environment variables");
-  }
-
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      autoRefreshToken: false,
-      persistSession: false,
-    },
-  });
+  return createServiceClient();
 }

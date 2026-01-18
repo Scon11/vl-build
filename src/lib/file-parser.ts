@@ -201,3 +201,17 @@ async function parseTxt(buffer: Buffer): Promise<ParseResult> {
 function countWords(text: string): number {
   return text.split(/\s+/).filter((word) => word.length > 0).length;
 }
+
+/**
+ * Get page count from a PDF buffer without full text extraction.
+ * Returns null if unable to determine page count.
+ */
+export async function getPageCount(buffer: Buffer): Promise<number | null> {
+  try {
+    const uint8Array = new Uint8Array(buffer);
+    const result = await extractText(uint8Array);
+    return result.totalPages || null;
+  } catch {
+    return null;
+  }
+}

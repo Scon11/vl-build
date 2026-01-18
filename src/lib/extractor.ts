@@ -457,6 +457,76 @@ function matchCustomerRegexRules(
   return null;
 }
 
+/**
+ * Check if a value matches any customer-specific VALUE PATTERN rules.
+ * These are the highest-priority rules - if a value matches the pattern,
+ * it's classified as that type regardless of label.
+ * 
+ * HARDENED behavior:
+ * - Enforces scope at application time (pickup/delivery/header/global)
+ * - Skips deprecated rules (status !== "active")
+ * - Returns rule index for hit tracking
+ * 
+ * @param value The reference number value to check
+ * @param blockType The block type where this value was found (for scope checking)
+ * @param customerProfile Customer profile with value rules
+ */
+function matchValuePatternRules(
+  value: string,
+  blockType: "header" | "pickup" | "delivery" | "unknown",
+  customerProfile?: CustomerProfile | null
+): { subtype: ReferenceNumberSubtype; rule: { pattern: string; scope: string }; ruleIndex: number } | null {
+  if (!customerProfile?.reference_value_rules?.length) {
+    return null;
+  }
+
+  // Filter out deprecated rules FIRST
+  const activeRules = customerProfile.reference_value_rules
+    .map((rule, index) => ({ rule, originalIndex: index }))
+    .filter(({ rule }) => rule.status !== "deprecated");
+
+  // Sort rules by priority (higher first), then by specificity (non-global before global)
+  const sortedRules = activeRules.sort((a, b) => {
+    // Priority first
+    const priorityDiff = (b.rule.priority ?? 0) - (a.rule.priority ?? 0);
+    if (priorityDiff !== 0) return priorityDiff;
+    // Then specificity - scoped rules before global
+    if (a.rule.scope !== "global" && b.rule.scope === "global") return -1;
+    if (a.rule.scope === "global" && b.rule.scope !== "global") return 1;
+    return 0;
+  });
+
+  for (const { rule, originalIndex } of sortedRules) {
+    // ENFORCE SCOPE at application time
+    // Scoped rules only apply when blockType matches
+    const scopeMatches = 
+      rule.scope === "global" || 
+      rule.scope === blockType ||
+      (rule.scope === "header" && blockType === "unknown"); // header rules apply to unknown blocks
+
+    if (!scopeMatches) {
+      console.log(`[Extractor] Skipping rule ${rule.pattern}: scope ${rule.scope} != block ${blockType}`);
+      continue;
+    }
+
+    try {
+      const regex = new RegExp(rule.pattern, "i");
+      if (regex.test(value)) {
+        console.log(`[Extractor] Value pattern rule matched: "${value}" -> ${rule.subtype} (pattern: ${rule.pattern}, scope: ${rule.scope}, block: ${blockType})`);
+        return { 
+          subtype: rule.subtype, 
+          rule: { pattern: rule.pattern, scope: rule.scope },
+          ruleIndex: originalIndex,
+        };
+      }
+    } catch {
+      console.warn(`Invalid customer value pattern: ${rule.pattern}`);
+    }
+  }
+
+  return null;
+}
+
 export interface ExtractCandidatesOptions {
   customerProfile?: CustomerProfile | null;
 }
@@ -531,37 +601,58 @@ export function extractCandidates(
 
       // For reference numbers, try to find a label hint or match regex rules
       // Also determine block scope (header vs stop)
+      // 
+      // Rule precedence (highest to lowest):
+      // 1. Value pattern rules - match on the VALUE itself (e.g., TRFR* -> PO)
+      // 2. Customer regex rules - legacy, match on value with context
+      // 3. Customer label rules - match on nearby label
+      // 4. Generic label rules - built-in patterns
       if (config.type === "reference_number") {
         // Determine what block this candidate is in
         const blockType = getBlockTypeAtPosition(text, match.index);
         
-        // First, try customer regex rules on the value itself
-        // But only if we have label context nearby (safety guard)
-        const regexMatch = matchCustomerRegexRules(value.trim(), customerProfile);
-        if (regexMatch) {
-          // Verify there's some label context - don't apply regex globally without context
-          const nearbyContext = text.slice(Math.max(0, match.index - 100), match.index + value.length + 50);
-          const hasLabelContext = /[#:]/.test(nearbyContext) || /\b(load|order|po|ref|bol|confirmation|release)\b/i.test(nearbyContext);
-          
-          if (hasLabelContext) {
-            subtype = regexMatch.subtype;
-            usedCustomerRule = true;
-            ruleLog.applied.push({
-              rule: `customer_regex`,
-              candidate: value,
-              reason: `block=${blockType}, has_context=${hasLabelContext}`,
-            });
-          } else {
-            ruleLog.skipped.push({
-              rule: `customer_regex`,
-              candidate: value,
-              reason: "no_label_context_nearby",
-            });
+        // HIGHEST PRIORITY: Value pattern rules
+        // If the value matches a pattern, classify it regardless of label
+        const valuePatternMatch = matchValuePatternRules(value.trim(), blockType, customerProfile);
+        if (valuePatternMatch) {
+          subtype = valuePatternMatch.subtype;
+          usedCustomerRule = true;
+          ruleLog.applied.push({
+            rule: `value_pattern:${valuePatternMatch.rule.pattern}`,
+            candidate: value,
+            reason: `block=${blockType}, scope=${valuePatternMatch.rule.scope}`,
+          });
+        }
+        
+        if (!usedCustomerRule) {
+          // Second priority: Customer regex rules on the value itself
+          // But only if we have label context nearby (safety guard)
+          const regexMatch = matchCustomerRegexRules(value.trim(), customerProfile);
+          if (regexMatch) {
+            // Verify there's some label context - don't apply regex globally without context
+            const nearbyContext = text.slice(Math.max(0, match.index - 100), match.index + value.length + 50);
+            const hasLabelContext = /[#:]/.test(nearbyContext) || /\b(load|order|po|ref|bol|confirmation|release)\b/i.test(nearbyContext);
+            
+            if (hasLabelContext) {
+              subtype = regexMatch.subtype;
+              usedCustomerRule = true;
+              ruleLog.applied.push({
+                rule: `customer_regex`,
+                candidate: value,
+                reason: `block=${blockType}, has_context=${hasLabelContext}`,
+              });
+            } else {
+              ruleLog.skipped.push({
+                rule: `customer_regex`,
+                candidate: value,
+                reason: "no_label_context_nearby",
+              });
+            }
           }
         }
         
         if (!usedCustomerRule) {
-          // Then try label hints (customer rules checked first inside findLabelHint)
+          // Third priority: Label hints (customer rules checked first inside findLabelHint)
           const hintResult = findLabelHint(text, match.index, customerProfile, ruleLog);
           if (hintResult) {
             labelHint = hintResult.hint;

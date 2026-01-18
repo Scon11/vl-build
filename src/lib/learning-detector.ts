@@ -3,6 +3,11 @@
  *
  * Detects when a user makes ANY edit (reference reclassification, cargo changes, etc.)
  * and suggests rules to add to the customer profile.
+ * 
+ * HARDENED for production use across 500+ customers:
+ * - Generic pattern detection (no prefix allowlists)
+ * - Collision checks to avoid overly broad patterns
+ * - Scoring threshold to ensure quality suggestions
  */
 
 import {
@@ -14,7 +19,10 @@ import {
   LearningEvent,
   LearnableFieldType,
   CargoDetails,
+  RuleScope,
+  ReferenceValueRule,
 } from "./types";
+import { getBlockTypeAtPosition } from "./segmenter";
 
 interface DetectReclassificationsInput {
   originalShipment: StructuredShipment; // LLM output before user edits
@@ -23,20 +31,409 @@ interface DetectReclassificationsInput {
   originalText: string; // Original tender text for fallback context extraction
 }
 
+// ============================================
+// HARDENING CONFIGURATION
+// ============================================
+
+/** Minimum length for a value to be considered for value_pattern learning */
+const MIN_VALUE_LENGTH = 8;
+
+/** Maximum distinct matches before a pattern is considered too broad */
+const MAX_COLLISION_COUNT = 3;
+
+/** Minimum score required to propose a value_pattern rule */
+const MIN_SCORE_THRESHOLD = 3;
+
+/** Patterns that indicate a value is NOT a reference (phone, date, time) */
+const EXCLUSION_PATTERNS = [
+  /^\d{3}[-.\s]?\d{3}[-.\s]?\d{4}$/, // Phone: 123-456-7890
+  /^\(\d{3}\)\s?\d{3}[-.\s]?\d{4}$/, // Phone: (123) 456-7890
+  /^\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4}$/, // Date: 1/15/2026 or 01-15-26
+  /^\d{1,2}:\d{2}(:\d{2})?\s?(AM|PM)?$/i, // Time: 10:30 AM
+  /^\d{5}(-\d{4})?$/, // ZIP code: 12345 or 12345-6789
+  /^[01]?\d{10}$/, // 10-digit phone with optional leading 0/1
+  /^\+\d{10,15}$/, // International phone
+];
+
+/**
+ * Check if a string has low entropy (repeated characters, all same char, etc.)
+ */
+function isLowEntropy(value: string): boolean {
+  // All same character
+  if (new Set(value).size <= 2) return true;
+  
+  // Check for repeated patterns like "AAAA" or "1111"
+  const repeatMatch = value.match(/(.)\1{3,}/);
+  if (repeatMatch) return true;
+  
+  // Check for sequential patterns like "12345" or "abcde"
+  const digitRun = value.match(/(0123|1234|2345|3456|4567|5678|6789)/);
+  if (digitRun) return true;
+  
+  return false;
+}
+
+/**
+ * Check if a value matches any exclusion pattern (phone, date, time, etc.)
+ */
+function matchesExclusionPattern(value: string): boolean {
+  return EXCLUSION_PATTERNS.some(pattern => pattern.test(value));
+}
+
+/**
+ * Check if a value is purely numeric (no letters) - these are risky to learn
+ */
+function isPurelyNumeric(value: string): boolean {
+  return /^\d+$/.test(value);
+}
+
+/**
+ * Derive a SPECIFIC regex pattern from a value.
+ * Returns null if no safe pattern can be derived.
+ * 
+ * Pattern generation rules:
+ * - Always anchored with ^ and $
+ * - Preserve the exact prefix letters
+ * - Use \\d{N,} where N is based on observed digit length (minimum 4)
+ * - Support optional separator characters (-, _)
+ */
+function deriveSpecificPattern(value: string): string | null {
+  // Pattern 1: PREFIX + NUMBERS (e.g., TRFR0010713 -> ^TRFR\d{7,}$)
+  const prefixNumMatch = value.match(/^([A-Z]{2,6})(\d{4,})$/i);
+  if (prefixNumMatch) {
+    const prefix = prefixNumMatch[1].toUpperCase();
+    const digitLen = prefixNumMatch[2].length;
+    // Require at least 4 digits, allow up to 2 more
+    const minDigits = Math.max(4, digitLen - 2);
+    return `^${prefix}\\d{${minDigits},}$`;
+  }
+
+  // Pattern 2: PREFIX-NUMBERS (e.g., PO-123456 -> ^PO-\d{5,}$)
+  const dashMatch = value.match(/^([A-Z]{2,5})[-_](\d{4,})$/i);
+  if (dashMatch) {
+    const prefix = dashMatch[1].toUpperCase();
+    const digitLen = dashMatch[2].length;
+    const minDigits = Math.max(4, digitLen - 2);
+    return `^${prefix}[-_]?\\d{${minDigits},}$`;
+  }
+
+  // Pattern 3: PREFIX + MIXED ALPHANUMERIC (e.g., ABC12X456 -> ^ABC[A-Z0-9]{6,}$)
+  const mixedMatch = value.match(/^([A-Z]{2,4})([A-Z0-9]{5,})$/i);
+  if (mixedMatch) {
+    const prefix = mixedMatch[1].toUpperCase();
+    const restLen = mixedMatch[2].length;
+    // Only if the rest contains both letters and numbers
+    const rest = mixedMatch[2];
+    if (/[A-Z]/i.test(rest) && /\d/.test(rest)) {
+      const minLen = Math.max(5, restLen - 2);
+      return `^${prefix}[A-Z0-9]{${minLen},}$`;
+    }
+  }
+
+  // Pattern 4: NUMBER-PREFIX-NUMBER (e.g., 25-FFI-001)
+  const numPrefixNumMatch = value.match(/^(\d{2,4})[-_]([A-Z]{2,5})[-_](\d{2,})$/i);
+  if (numPrefixNumMatch) {
+    const prefix = numPrefixNumMatch[2].toUpperCase();
+    return `^\\d{2,4}[-_]${prefix}[-_]\\d{2,}$`;
+  }
+
+  return null;
+}
+
+/**
+ * Count how many DISTINCT values in the text match a given regex pattern.
+ * Used for collision detection - if too many match, the pattern is too broad.
+ */
+function countPatternCollisions(
+  pattern: string,
+  candidates: ExtractedCandidate[],
+  originalText: string
+): { count: number; matches: string[] } {
+  const matches = new Set<string>();
+  
+  try {
+    const regex = new RegExp(pattern, "gi");
+    
+    // Check against all candidates
+    for (const candidate of candidates) {
+      if (candidate.type === "reference_number" && regex.test(candidate.value)) {
+        matches.add(candidate.value);
+      }
+      regex.lastIndex = 0; // Reset for next test
+    }
+    
+    // Also scan the raw text for additional matches
+    let match;
+    const textRegex = new RegExp(pattern, "gi");
+    while ((match = textRegex.exec(originalText)) !== null) {
+      const value = match[0];
+      // Only count if it looks like a reference (not embedded in longer text)
+      const before = originalText[match.index - 1] || " ";
+      const after = originalText[match.index + value.length] || " ";
+      if (/[\s\n:,;]/.test(before) && /[\s\n:,;]/.test(after)) {
+        matches.add(value);
+      }
+    }
+  } catch {
+    // Invalid regex - return high collision count to reject
+    return { count: 999, matches: [] };
+  }
+  
+  return { count: matches.size, matches: Array.from(matches).slice(0, 5) };
+}
+
+/**
+ * Compute a score for a value_pattern proposal.
+ * Higher score = more likely to be a good rule.
+ * 
+ * Scoring factors:
+ * +2: Value appears in multiple blocks (pickup + delivery, or header + stop)
+ * +2: User changed from null/unknown to concrete subtype
+ * +1: Labels differ across occurrences (suggests value-based, not label-based)
+ * +1: Value has clear alphanumeric structure
+ * -2: Value length < MIN_VALUE_LENGTH
+ * -2: Collision count > MAX_COLLISION_COUNT
+ * -2: Matches exclusion pattern (phone/date/time)
+ * -1: Low entropy (repeated chars)
+ * -1: Purely numeric
+ */
+interface PatternScoreResult {
+  score: number;
+  reasons: string[];
+  collisionCount: number;
+  exampleMatches: string[];
+}
+
+function computePatternScore(
+  value: string,
+  pattern: string,
+  originalType: ReferenceNumberSubtype | undefined,
+  candidates: ExtractedCandidate[],
+  originalText: string,
+  occurrencesInMultipleBlocks: boolean,
+  labelsDiffer: boolean
+): PatternScoreResult {
+  let score = 0;
+  const reasons: string[] = [];
+  
+  // Check collisions first
+  const { count: collisionCount, matches: exampleMatches } = countPatternCollisions(
+    pattern, 
+    candidates, 
+    originalText
+  );
+  
+  // Positive factors
+  if (occurrencesInMultipleBlocks) {
+    score += 2;
+    reasons.push("+2: appears in multiple blocks");
+  }
+  
+  if (!originalType || originalType === "unknown") {
+    score += 2;
+    reasons.push("+2: changed from unknown to specific type");
+  }
+  
+  if (labelsDiffer) {
+    score += 1;
+    reasons.push("+1: labels differ across occurrences");
+  }
+  
+  // Check if value has clear alphanumeric structure (letters + digits)
+  if (/[A-Z]/i.test(value) && /\d/.test(value)) {
+    score += 1;
+    reasons.push("+1: clear alphanumeric structure");
+  }
+  
+  // Negative factors
+  if (value.length < MIN_VALUE_LENGTH) {
+    score -= 2;
+    reasons.push(`-2: length ${value.length} < ${MIN_VALUE_LENGTH}`);
+  }
+  
+  if (collisionCount > MAX_COLLISION_COUNT) {
+    score -= 2;
+    reasons.push(`-2: collision count ${collisionCount} > ${MAX_COLLISION_COUNT}`);
+  }
+  
+  if (matchesExclusionPattern(value)) {
+    score -= 2;
+    reasons.push("-2: matches exclusion pattern (phone/date/time)");
+  }
+  
+  if (isLowEntropy(value)) {
+    score -= 1;
+    reasons.push("-1: low entropy value");
+  }
+  
+  if (isPurelyNumeric(value)) {
+    score -= 1;
+    reasons.push("-1: purely numeric (risky)");
+  }
+  
+  return { score, reasons, collisionCount, exampleMatches };
+}
+
+/**
+ * Check if a value has a strong pattern worth learning as a value_pattern rule.
+ * Returns null if no safe pattern can be derived, or if the pattern is too broad.
+ * 
+ * This is the HARDENED version that:
+ * - Uses generic detection (no prefix allowlists)
+ * - Requires minimum length
+ * - Avoids phone/date/time patterns
+ * - Avoids low-entropy values
+ * - Generates specific, anchored patterns
+ */
+function detectStrongValuePattern(
+  value: string,
+  candidates: ExtractedCandidate[],
+  originalText: string,
+  originalType: ReferenceNumberSubtype | undefined,
+  occurrencesInMultipleBlocks: boolean = false,
+  labelsDiffer: boolean = false
+): { pattern: string; score: number; collisionCount: number; exampleMatches: string[]; reasons: string[] } | null {
+  // Quick rejection checks
+  if (value.length < MIN_VALUE_LENGTH) {
+    return null;
+  }
+  
+  if (matchesExclusionPattern(value)) {
+    return null;
+  }
+  
+  if (isLowEntropy(value)) {
+    return null;
+  }
+  
+  // Derive a specific pattern
+  const pattern = deriveSpecificPattern(value);
+  if (!pattern) {
+    return null;
+  }
+  
+  // Compute score with collision check
+  const scoreResult = computePatternScore(
+    value,
+    pattern,
+    originalType,
+    candidates,
+    originalText,
+    occurrencesInMultipleBlocks,
+    labelsDiffer
+  );
+  
+  // Reject if score is below threshold
+  if (scoreResult.score < MIN_SCORE_THRESHOLD) {
+    console.log(`[Learning] Pattern ${pattern} rejected: score ${scoreResult.score} < ${MIN_SCORE_THRESHOLD}`);
+    console.log(`[Learning]   Reasons: ${scoreResult.reasons.join(", ")}`);
+    return null;
+  }
+  
+  console.log(`[Learning] Pattern ${pattern} accepted: score ${scoreResult.score}`);
+  console.log(`[Learning]   Reasons: ${scoreResult.reasons.join(", ")}`);
+  
+  return {
+    pattern,
+    score: scoreResult.score,
+    collisionCount: scoreResult.collisionCount,
+    exampleMatches: scoreResult.exampleMatches,
+    reasons: scoreResult.reasons,
+  };
+}
+
+/**
+ * Determine the scope for a reference based on its location in stops.
+ */
+function determineRefScope(
+  ref: ReferenceNumber,
+  stopIndex: number | null,
+  stopType: "pickup" | "delivery" | null
+): RuleScope {
+  if (stopIndex !== null && stopType) {
+    return stopType;
+  }
+  return "global";
+}
+
 export interface DetectAllEditsInput extends DetectReclassificationsInput {
   customerId?: string;
   tenderId?: string;
 }
 
 /**
+ * Analyze where a value appears across the shipment.
+ * Returns info about multiple block occurrences and label differences.
+ */
+function analyzeValueOccurrences(
+  value: string,
+  originalShipment: StructuredShipment,
+  finalShipment: StructuredShipment,
+  candidates: ExtractedCandidate[]
+): { multipleBlocks: boolean; labelsDiffer: boolean; scopes: RuleScope[] } {
+  const scopes = new Set<RuleScope>();
+  const labels = new Set<string>();
+  
+  const normalizeValue = (v: string): string => v.replace(/^0+/, "").trim();
+  const normalized = normalizeValue(value);
+  
+  // Check all shipments for this value
+  const allShipments = [originalShipment, finalShipment];
+  for (const shipment of allShipments) {
+    // Shipment-level refs
+    for (const ref of shipment.reference_numbers) {
+      if (ref.value === value || normalizeValue(ref.value) === normalized) {
+        scopes.add("global");
+      }
+    }
+    // Stop-level refs
+    for (const stop of shipment.stops) {
+      for (const ref of stop.reference_numbers) {
+        if (ref.value === value || normalizeValue(ref.value) === normalized) {
+          scopes.add(stop.type as RuleScope);
+        }
+      }
+    }
+  }
+  
+  // Check candidates for label differences
+  for (const candidate of candidates) {
+    if (candidate.type === "reference_number") {
+      if (candidate.value === value || normalizeValue(candidate.value) === normalized) {
+        if (candidate.label_hint) {
+          labels.add(candidate.label_hint.toLowerCase());
+        }
+      }
+    }
+  }
+  
+  return {
+    multipleBlocks: scopes.size > 1,
+    labelsDiffer: labels.size > 1,
+    scopes: Array.from(scopes),
+  };
+}
+
+/**
  * Find reference numbers that were reclassified by the user.
  * Returns suggested rules based on the reclassifications.
+ * 
+ * HARDENED rule suggestion with scoring:
+ * 1. value_pattern - only if score >= threshold and collision check passes
+ * 2. label - if there's a clear label, suggest label -> subtype
+ * 3. regex - fallback for complex patterns (rare)
  */
 export function detectReclassifications(
   input: DetectReclassificationsInput
 ): SuggestedRule[] {
   const { originalShipment, finalShipment, candidates, originalText } = input;
   const suggestedRules: SuggestedRule[] = [];
+  
+  // Track values we've already processed (for deduplication)
+  const processedValues = new Set<string>();
+  
+  // Track value patterns we've suggested (to avoid duplicates)
+  const suggestedPatterns = new Set<string>();
 
   // Normalize value for comparison (strip leading zeros, trim)
   const normalizeValue = (value: string): string => {
@@ -44,19 +441,21 @@ export function detectReclassifications(
   };
 
   // Build a map of original classifications by value (both normalized and original)
-  const originalClassifications = new Map<string, ReferenceNumberSubtype>();
+  const originalClassifications = new Map<string, { type: ReferenceNumberSubtype; scope: RuleScope }>();
 
   // From shipment-level refs
   for (const ref of originalShipment.reference_numbers) {
-    originalClassifications.set(ref.value, ref.type);
-    originalClassifications.set(normalizeValue(ref.value), ref.type);
+    originalClassifications.set(ref.value, { type: ref.type, scope: "global" });
+    originalClassifications.set(normalizeValue(ref.value), { type: ref.type, scope: "global" });
   }
 
   // From stop-level refs
-  for (const stop of originalShipment.stops) {
+  for (let i = 0; i < originalShipment.stops.length; i++) {
+    const stop = originalShipment.stops[i];
+    const stopScope: RuleScope = stop.type as RuleScope;
     for (const ref of stop.reference_numbers) {
-      originalClassifications.set(ref.value, ref.type);
-      originalClassifications.set(normalizeValue(ref.value), ref.type);
+      originalClassifications.set(ref.value, { type: ref.type, scope: stopScope });
+      originalClassifications.set(normalizeValue(ref.value), { type: ref.type, scope: stopScope });
     }
   }
 
@@ -74,25 +473,21 @@ export function detectReclassifications(
   };
 
   // Fallback: extract context directly from original text
-  const extractContextFromText = (value: string): string | null => {
-    // Try to find the value in the original text
+  const extractContextFromText = (value: string): { context: string; position: number } | null => {
     const searchTerms = [value, normalizeValue(value)];
     
     for (const term of searchTerms) {
       const index = originalText.indexOf(term);
       if (index >= 0) {
-        // Extract context window around the match
         const start = Math.max(0, index - 50);
         const end = Math.min(originalText.length, index + term.length + 30);
         let context = originalText.slice(start, end);
         
-        // Clean up context
         if (start > 0) context = "..." + context;
         if (end < originalText.length) context = context + "...";
         context = context.replace(/\s+/g, " ").trim();
         
-        console.log(`[Learning] Extracted context from text for "${term}": "${context}"`);
-        return context;
+        return { context, position: index };
       }
     }
     
@@ -100,46 +495,111 @@ export function detectReclassifications(
   };
 
   // Get original type with flexible matching
-  const getOriginalType = (value: string): ReferenceNumberSubtype | undefined => {
+  const getOriginalInfo = (value: string): { type: ReferenceNumberSubtype; scope: RuleScope } | undefined => {
     return originalClassifications.get(value) || 
            originalClassifications.get(normalizeValue(value));
   };
 
-  // Check for reclassified shipment-level refs
-  const checkRef = (ref: ReferenceNumber) => {
-    const originalType = getOriginalType(ref.value);
+  // Check for reclassified ref with scope awareness
+  const checkRef = (
+    ref: ReferenceNumber, 
+    stopIndex: number | null, 
+    stopType: "pickup" | "delivery" | null
+  ) => {
+    // Skip if we've already processed this value
+    if (processedValues.has(ref.value)) {
+      return;
+    }
+    
+    const originalInfo = getOriginalInfo(ref.value);
+    const currentScope = determineRefScope(ref, stopIndex, stopType);
 
-    console.log(`[Learning] Checking ref "${ref.value}": original=${originalType}, final=${ref.type}`);
+    console.log(`[Learning] Checking ref "${ref.value}": original=${originalInfo?.type}, final=${ref.type}, scope=${currentScope}`);
 
     // If the type changed from what the LLM classified (including unknown -> specific)
-    if (originalType && originalType !== ref.type && ref.type !== "unknown") {
+    if (originalInfo && originalInfo.type !== ref.type && ref.type !== "unknown") {
+      processedValues.add(ref.value);
+      
       const candidate = findCandidateContext(ref.value);
       console.log(`[Learning] Type changed! Candidate:`, candidate ? { label_hint: candidate.label_hint, context: candidate.context } : "not found");
 
-      // Get context - from candidate, or fallback to searching original text
+      // Get context and position
       let context = candidate?.context || null;
+      let position: number | null = candidate?.position?.start ?? null;
+      
       if (!context) {
-        context = extractContextFromText(ref.value);
+        const textResult = extractContextFromText(ref.value);
+        if (textResult) {
+          context = textResult.context;
+          position = textResult.position;
+        }
       }
 
-      // Try to find a label - first from hint, then from context
+      // Determine scope from text position if available
+      let detectedScope: RuleScope = currentScope;
+      if (position !== null) {
+        const blockType = getBlockTypeAtPosition(originalText, position);
+        if (blockType === "pickup" || blockType === "delivery") {
+          detectedScope = blockType;
+        } else if (blockType === "header") {
+          detectedScope = "header";
+        }
+      }
+
+      // Analyze value occurrences for scoring
+      const occurrences = analyzeValueOccurrences(
+        ref.value,
+        originalShipment,
+        finalShipment,
+        candidates
+      );
+
+      // PRIORITY 1: Check for strong value pattern with HARDENED detection
+      const patternResult = detectStrongValuePattern(
+        ref.value,
+        candidates,
+        originalText,
+        originalInfo.type,
+        occurrences.multipleBlocks,
+        occurrences.labelsDiffer
+      );
+      
+      if (patternResult && !suggestedPatterns.has(patternResult.pattern)) {
+        suggestedPatterns.add(patternResult.pattern);
+        suggestedRules.push({
+          type: "value_pattern",
+          pattern: patternResult.pattern,
+          subtype: ref.type,
+          scope: "global", // Value patterns are typically global
+          example_value: ref.value,
+          context: context || "",
+          // Include match metadata for UI transparency
+          match_count: patternResult.collisionCount,
+          example_matches: patternResult.exampleMatches,
+          score: patternResult.score,
+        });
+        console.log(`[Learning] Suggesting value_pattern rule: ${patternResult.pattern} -> ${ref.type} (score: ${patternResult.score})`);
+        return; // Don't also suggest label rule for same value
+      }
+
+      // PRIORITY 2: Label-based rule
       let label = candidate?.label_hint;
       if (!label && context) {
         label = extractLabelFromContext(context, ref.value);
       }
 
-      // If there's a label, suggest a label rule
       if (label) {
         suggestedRules.push({
           type: "label",
           label: label,
           subtype: ref.type,
+          scope: detectedScope,
           example_value: ref.value,
           context: context || "",
         });
-        console.log(`[Learning] Suggesting label rule: "${label}" -> ${ref.type}`);
+        console.log(`[Learning] Suggesting label rule: "${label}" -> ${ref.type} (${detectedScope})`);
       } else if (context) {
-        // Try to derive a regex pattern from the value
+        // PRIORITY 3: Legacy regex pattern
         const pattern = derivePattern(ref.value);
         console.log(`[Learning] Derived pattern: ${pattern}`);
         if (pattern) {
@@ -147,6 +607,7 @@ export function detectReclassifications(
             type: "regex",
             pattern,
             subtype: ref.type,
+            scope: detectedScope,
             example_value: ref.value,
             context: context,
           });
@@ -157,15 +618,17 @@ export function detectReclassifications(
     }
   };
 
-  // Check shipment-level refs
+  // Check shipment-level refs (global scope)
   for (const ref of finalShipment.reference_numbers) {
-    checkRef(ref);
+    checkRef(ref, null, null);
   }
 
-  // Check stop-level refs
-  for (const stop of finalShipment.stops) {
+  // Check stop-level refs (with scope)
+  for (let i = 0; i < finalShipment.stops.length; i++) {
+    const stop = finalShipment.stops[i];
+    const stopType = stop.type as "pickup" | "delivery";
     for (const ref of stop.reference_numbers) {
-      checkRef(ref);
+      checkRef(ref, i, stopType);
     }
   }
 
@@ -242,10 +705,14 @@ function deduplicateSuggestions(suggestions: SuggestedRule[]): SuggestedRule[] {
   const unique: SuggestedRule[] = [];
 
   for (const suggestion of suggestions) {
-    const key =
-      suggestion.type === "label"
-        ? `label:${suggestion.label?.toLowerCase()}`
-        : `regex:${suggestion.pattern}`;
+    let key: string;
+    if (suggestion.type === "label") {
+      key = `label:${suggestion.label?.toLowerCase()}`;
+    } else if (suggestion.type === "value_pattern") {
+      key = `value_pattern:${suggestion.pattern}`;
+    } else {
+      key = `regex:${suggestion.pattern}`;
+    }
 
     if (!seen.has(key)) {
       seen.add(key);
@@ -258,11 +725,13 @@ function deduplicateSuggestions(suggestions: SuggestedRule[]): SuggestedRule[] {
 
 /**
  * Check if a suggested rule already exists in the customer profile rules.
+ * Now supports value_pattern rules with scope checking.
  */
 export function isRuleAlreadyLearned(
   suggestion: SuggestedRule,
   existingLabelRules: { label: string; subtype: ReferenceNumberSubtype }[],
-  existingRegexRules: { pattern: string; subtype: ReferenceNumberSubtype }[]
+  existingRegexRules: { pattern: string; subtype: ReferenceNumberSubtype }[],
+  existingValueRules?: ReferenceValueRule[]
 ): boolean {
   if (suggestion.type === "label" && suggestion.label) {
     return existingLabelRules.some(
@@ -276,6 +745,20 @@ export function isRuleAlreadyLearned(
     return existingRegexRules.some(
       (r) => r.pattern === suggestion.pattern && r.subtype === suggestion.subtype
     );
+  }
+
+  if (suggestion.type === "value_pattern" && suggestion.pattern) {
+    if (!existingValueRules?.length) return false;
+    
+    return existingValueRules.some((r) => {
+      // Pattern must match
+      if (r.pattern !== suggestion.pattern) return false;
+      // Subtype must match
+      if (r.subtype !== suggestion.subtype) return false;
+      // Scope must match (or existing rule is global which covers all scopes)
+      if (r.scope !== "global" && r.scope !== suggestion.scope) return false;
+      return true;
+    });
   }
 
   return false;

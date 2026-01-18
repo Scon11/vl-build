@@ -1,23 +1,73 @@
 // Core types for VL Build
 
 export type SourceType = "paste" | "file";
-export type TenderStatus = "draft" | "reviewed" | "exported";
+
+/**
+ * Tender status state machine:
+ * draft -> extracted -> needs_review -> reviewed -> export_pending -> exported
+ *                                                                 \-> export_failed
+ */
+export type TenderStatus = 
+  | "draft"           // Initial state after upload/paste
+  | "extracted"       // LLM extraction completed
+  | "needs_review"    // Flagged for human review (e.g., hallucination warnings)
+  | "reviewed"        // Human approved the extraction
+  | "export_pending"  // Export in progress
+  | "exported"        // Successfully exported
+  | "export_failed";  // Export failed (can retry)
+
+/**
+ * Valid state transitions for tender status
+ */
+export const TENDER_STATUS_TRANSITIONS: Record<TenderStatus, TenderStatus[]> = {
+  draft: ["extracted"],
+  extracted: ["needs_review", "reviewed"], // Can skip review if no warnings
+  needs_review: ["reviewed", "extracted"], // Can reprocess
+  reviewed: ["export_pending", "needs_review"], // Can go back for edits
+  export_pending: ["exported", "export_failed"],
+  exported: [], // Terminal state (success)
+  export_failed: ["export_pending", "reviewed"], // Can retry or go back
+};
 
 export interface Tender {
   id: string;
   source_type: SourceType;
   original_text: string;
   original_file_url: string | null;
+  original_file_path: string | null; // Private storage path
   status: TenderStatus;
   created_at: string;
   reviewed_at: string | null;
+  
+  // Deduplication hashes
+  file_hash: string | null;
+  text_hash: string | null;
+  
+  // Audit fields
+  created_by: string | null;
+  updated_by: string | null;
+  reviewed_by: string | null;
+  exported_by: string | null;
+  
+  // Export fields
+  export_provider: string | null;
+  export_external_id: string | null;
+  export_attempts: number;
+  last_export_attempt_at: string | null;
+  exported_at: string | null;
+  
+  // Processing lock fields
+  locked_at: string | null;
+  locked_by: string | null;
+  lock_reason: string | null;
 }
 
 export interface FinalFields {
   id: string;
   tender_id: string;
   shipment: StructuredShipment;
-  reviewed_by: string | null; // for future auth
+  reviewed_by: string | null; // UUID of auth user
+  updated_by: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -291,6 +341,40 @@ export interface ReferenceRegexRule {
 }
 
 /**
+ * Rule scope - where the rule should be applied
+ */
+export type RuleScope = "global" | "pickup" | "delivery" | "header";
+
+/**
+ * Rule lifecycle status
+ */
+export type ValueRuleStatus = "active" | "deprecated";
+
+/**
+ * Maps value patterns to reference number subtypes.
+ * These are the highest-priority rules - if a value matches,
+ * it's classified regardless of label.
+ * 
+ * Example: "^TRFR\\d+$" -> "po" (global)
+ * This means any TRFR* value is a PO, anywhere it appears.
+ */
+export interface ReferenceValueRule {
+  pattern: string; // Regex pattern for the VALUE (e.g., "^TRFR\\d+$")
+  subtype: ReferenceNumberSubtype;
+  scope: RuleScope; // Where this applies
+  priority?: number; // Higher = applies first (default 0)
+  description?: string;
+  confidence: number;
+  learned_from?: string;
+  created_at: string;
+  
+  // Lifecycle metadata
+  status?: ValueRuleStatus; // Default: "active", deprecated rules are not applied
+  created_by?: string; // User ID who created this rule
+  hits?: number; // How many times this rule has matched (incremented on apply)
+}
+
+/**
  * Hints for stop parsing specific to a customer.
  */
 export interface StopParsingHints {
@@ -326,6 +410,7 @@ export interface CustomerProfile {
   code?: string; // Short code like "ACME" or "FFI"
   reference_label_rules: ReferenceLabelRule[];
   reference_regex_rules: ReferenceRegexRule[];
+  reference_value_rules?: ReferenceValueRule[]; // Value-pattern based rules (highest priority)
   stop_parsing_hints: StopParsingHints;
   cargo_hints?: CargoHints;
   notes?: string;
@@ -336,14 +421,25 @@ export interface CustomerProfile {
 /**
  * Suggested rule based on user reclassification.
  * Shown to user for review before adding to profile.
+ * 
+ * Rule precedence (highest to lowest):
+ * 1. value_pattern - applies when VALUE matches pattern (e.g., TRFR* -> PO)
+ * 2. label - applies when LABEL matches (e.g., "Release #" -> PO)
+ * 3. regex - legacy, pattern on label or value (being deprecated)
  */
 export interface SuggestedRule {
-  type: "label" | "regex";
+  type: "label" | "regex" | "value_pattern";
   label?: string;
-  pattern?: string;
+  pattern?: string; // For regex and value_pattern types
   subtype: ReferenceNumberSubtype;
+  scope?: RuleScope; // Where this rule applies (default: global)
   example_value: string;
   context: string;
+  
+  // Match metadata for UI transparency (value_pattern only)
+  match_count?: number; // How many distinct values matched in this tender
+  example_matches?: string[]; // Up to 3 example values that match
+  score?: number; // Internal score used to decide if rule should be proposed
 }
 
 /**
@@ -419,4 +515,210 @@ export interface SuggestedEdit {
   temp_mode?: "frozen" | "refrigerated" | "dry";
   example_value: string;
   context: string;
+}
+
+// ============================================
+// Export System Types
+// ============================================
+
+/**
+ * Export action types
+ */
+export type ExportAction = "dry_run" | "export" | "retry" | "cancel" | "rollback";
+
+/**
+ * Export log status
+ */
+export type ExportLogStatus = "pending" | "success" | "failed" | "cancelled";
+
+/**
+ * Export log entry for audit trail
+ */
+export interface ExportLog {
+  id: string;
+  tender_id: string;
+  provider: string;
+  action: ExportAction;
+  status: ExportLogStatus;
+  idempotency_key: string | null;
+  request_payload: Record<string, unknown> | null;
+  response_payload: Record<string, unknown> | null;
+  error_message: string | null;
+  error_code: string | null;
+  external_id: string | null;
+  created_by: string | null;
+  created_at: string;
+  duration_ms: number | null;
+}
+
+/**
+ * Result of an export operation
+ */
+export interface ExportResult {
+  success: boolean;
+  external_id?: string;
+  message?: string;
+  error_code?: string;
+  error_message?: string;
+  dry_run?: boolean;
+  payload?: Record<string, unknown>;
+}
+
+/**
+ * Export request for provider
+ */
+export interface ExportRequest {
+  tender_id: string;
+  shipment: StructuredShipment;
+  customer_id?: string;
+  idempotency_key?: string;
+  dry_run?: boolean;
+}
+
+// ============================================
+// Rule Lifecycle Types
+// ============================================
+
+/**
+ * Rule status for lifecycle management
+ */
+export type RuleStatus = "proposed" | "active" | "deprecated";
+
+/**
+ * Rule type for customer_rules table
+ */
+export type CustomerRuleType = "label_map" | "regex_map" | "cargo_hint";
+
+/**
+ * Customer rule from the customer_rules table
+ */
+export interface CustomerRule {
+  id: string;
+  customer_id: string;
+  rule_type: CustomerRuleType;
+  pattern: string;
+  target_value: string;
+  description?: string;
+  status: RuleStatus;
+  confidence: number;
+  
+  // Audit
+  created_by?: string;
+  approved_by?: string;
+  approved_at?: string;
+  deprecated_by?: string;
+  deprecated_at?: string;
+  learned_from_tender?: string;
+  
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Extended reference label rule with lifecycle
+ */
+export interface ReferenceLabelRuleWithStatus extends ReferenceLabelRule {
+  status?: RuleStatus;
+  disabled_at?: string;
+  disabled_by?: string;
+}
+
+/**
+ * Extended reference regex rule with lifecycle
+ */
+export interface ReferenceRegexRuleWithStatus extends ReferenceRegexRule {
+  status?: RuleStatus;
+  disabled_at?: string;
+  disabled_by?: string;
+}
+
+// ============================================
+// Batch Upload Types (V1.6)
+// ============================================
+
+/**
+ * Batch status
+ */
+export type BatchStatus = "active" | "completed" | "abandoned";
+
+/**
+ * Batch item state
+ */
+export type BatchItemState = "ready" | "needs_review" | "reviewed" | "skipped" | "failed";
+
+/**
+ * Tender batch for multi-file uploads
+ */
+export interface TenderBatch {
+  id: string;
+  created_by: string;
+  customer_id: string | null;
+  status: BatchStatus;
+  current_index: number;
+  total_items: number;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Individual item in a batch
+ */
+export interface TenderBatchItem {
+  id: string;
+  batch_id: string;
+  tender_id: string;
+  file_name: string;
+  source_type: "file" | "paste";
+  position: number;
+  state: BatchItemState;
+  deduped: boolean;
+  error_message: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * Batch with items for API responses
+ */
+export interface TenderBatchWithItems extends TenderBatch {
+  items: TenderBatchItem[];
+}
+
+/**
+ * Batch summary counts
+ */
+export interface BatchSummary {
+  total: number;
+  ready: number;
+  needs_review: number;
+  reviewed: number;
+  skipped: number;
+  failed: number;
+  deduped: number;
+}
+
+/**
+ * Response from batch upload endpoint
+ */
+export interface BatchUploadResponse {
+  batch_id: string;
+  items: Array<{
+    position: number;
+    tender_id: string;
+    file_name: string;
+    state: BatchItemState;
+    deduped: boolean;
+    error_message?: string;
+  }>;
+  first_tender_id: string | null;
+}
+
+/**
+ * Response from batch advance endpoint
+ */
+export interface BatchAdvanceResponse {
+  completed: boolean;
+  next_tender_id: string | null;
+  current_index: number;
+  summary?: BatchSummary;
 }

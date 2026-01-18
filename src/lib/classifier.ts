@@ -12,10 +12,22 @@ import { verifyShipment } from "./verifier";
 import { normalizeShipment } from "./normalizer";
 
 const CLASSIFIER_MODEL = "gpt-4o-mini";
+export const EXTRACTION_VERSION = "1.4.0";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+/**
+ * OpenAI usage information captured from the response.
+ */
+export interface OpenAIUsage {
+  model: string;
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+  durationMs: number;
+}
 
 const SYSTEM_PROMPT = `You are a precise load tender extractor for freight brokerage. Your ONLY data sources are the provided original text and extracted candidates. NEVER invent, infer, truncate, or hallucinate any value—return null if no exact match exists in candidates or text.
 
@@ -243,8 +255,14 @@ const RESPONSE_SCHEMA = {
   required: ["reference_numbers", "stops", "cargo", "unclassified_notes"],
 };
 
-export async function classifyShipment(input: ClassifyInput): Promise<StructuredShipment> {
+export interface ClassifyResult {
+  shipment: StructuredShipment;
+  usage: OpenAIUsage;
+}
+
+export async function classifyShipment(input: ClassifyInput): Promise<ClassifyResult> {
   const { originalText, candidates, customerProfile } = input;
+  const startTime = Date.now();
 
   // Format candidates for the prompt - include confidence for high-confidence items
   const candidatesSummary = candidates
@@ -290,6 +308,8 @@ Please structure this into a shipment schema. Remember: use null for any field n
     temperature: 0.1, // Low temp for consistency
   });
 
+  const durationMs = Date.now() - startTime;
+
   const content = response.choices[0]?.message?.content;
   if (!content) {
     throw new Error("No response from LLM");
@@ -297,9 +317,12 @@ Please structure this into a shipment schema. Remember: use null for any field n
 
   const parsed = JSON.parse(content);
 
+  // Filter out bad references (phones, street numbers) from LLM output (defense in depth)
+  const filtered = filterBadReferencesFromOutput(parsed);
+
   // Add classification metadata
-  const result: StructuredShipment = {
-    ...parsed,
+  const shipment: StructuredShipment = {
+    ...filtered,
     classification_metadata: {
       model: CLASSIFIER_MODEL,
       classified_at: new Date().toISOString(),
@@ -307,6 +330,93 @@ Please structure this into a shipment schema. Remember: use null for any field n
     },
   };
 
+  // Capture usage info
+  const usage: OpenAIUsage = {
+    model: response.model || CLASSIFIER_MODEL,
+    promptTokens: response.usage?.prompt_tokens || 0,
+    completionTokens: response.usage?.completion_tokens || 0,
+    totalTokens: response.usage?.total_tokens || 0,
+    durationMs,
+  };
+
+  return { shipment, usage };
+}
+
+/**
+ * Patterns that should NEVER be reference numbers.
+ * This is a post-processing filter for LLM output (defense in depth).
+ */
+const BAD_REFERENCE_PATTERNS = [
+  // Phone: (800) 657-7475 or (800)657-7475
+  /^\s*\(\d{3}\)\s*\d{3}[-.\s]?\d{4}\s*$/,
+  // Phone: 844-211-1470, 614-735-9727
+  /^\s*\d{3}[-.\s]\d{3}[-.\s]\d{4}\s*$/,
+  // Phone: 10 consecutive digits: 8446211470, 5097871577
+  /^\s*\d{10}\s*$/,
+  // Phone: 7-digit local number: 6577475
+  /^\s*\d{7}\s*$/,
+  // Phone with extension: 844-211-1470 x 114
+  /^\s*\d{3}[-.\s]\d{3}[-.\s]\d{4}\s*(?:x|ext\.?|extension)\s*\d{1,5}\s*$/i,
+  // Phone: Toll-free prefixes: 800, 888, 877, 866, 855, 844
+  /^\s*8[0-9]{2}[-.\s]?\d{3}[-.\s]?\d{4}\s*$/,
+  // Street numbers: 1-4 digit pure numbers (e.g., "6755", "650", "877")
+  // These are often extracted from addresses like "6755 W 100 N"
+  // Note: 5+ digit numbers could be valid refs, so we only filter 1-4 digits
+  /^\s*\d{1,4}\s*$/,
+];
+
+/**
+ * Check if a value looks like a phone number or street number.
+ */
+function isBadReferenceValue(value: string): boolean {
+  if (!value) return false;
+  const trimmed = value.trim();
+  return BAD_REFERENCE_PATTERNS.some((pattern) => pattern.test(trimmed));
+}
+
+/**
+ * Filter bad reference numbers from the LLM output.
+ * Removes phone-like values and street numbers from reference_numbers at shipment and stop levels.
+ */
+function filterBadReferencesFromOutput(shipment: Partial<StructuredShipment>): Partial<StructuredShipment> {
+  const result = { ...shipment };
+  
+  // Filter shipment-level reference numbers
+  if (result.reference_numbers && Array.isArray(result.reference_numbers)) {
+    const originalCount = result.reference_numbers.length;
+    result.reference_numbers = result.reference_numbers.filter((ref) => {
+      if (isBadReferenceValue(ref.value)) {
+        console.log(`[RefFilter] Removed bad ref from shipment: "${ref.value}"`);
+        return false;
+      }
+      return true;
+    });
+    if (result.reference_numbers.length < originalCount) {
+      console.log(`[RefFilter] Filtered ${originalCount - result.reference_numbers.length} bad ref(s) from shipment refs`);
+    }
+  }
+  
+  // Filter stop-level reference numbers
+  if (result.stops && Array.isArray(result.stops)) {
+    result.stops = result.stops.map((stop, idx) => {
+      if (stop.reference_numbers && Array.isArray(stop.reference_numbers)) {
+        const originalCount = stop.reference_numbers.length;
+        const filteredRefs = stop.reference_numbers.filter((ref) => {
+          if (isBadReferenceValue(ref.value)) {
+            console.log(`[RefFilter] Removed bad ref from stop[${idx}]: "${ref.value}"`);
+            return false;
+          }
+          return true;
+        });
+        if (filteredRefs.length < originalCount) {
+          console.log(`[RefFilter] Filtered ${originalCount - filteredRefs.length} bad ref(s) from stop[${idx}]`);
+        }
+        return { ...stop, reference_numbers: filteredRefs };
+      }
+      return stop;
+    });
+  }
+  
   return result;
 }
 
@@ -430,16 +540,24 @@ function applyCargoDefaults(
 }
 
 /**
+ * Extended verification result that includes LLM usage info.
+ */
+export interface VerifiedShipmentResultWithUsage extends VerifiedShipmentResult {
+  usage: OpenAIUsage;
+}
+
+/**
  * Classify shipment and verify the results against source data.
  * Returns both the verified shipment and any warnings about unsupported values.
  */
 export async function classifyAndVerifyShipment(
   input: ClassifyInput
-): Promise<VerifiedShipmentResult> {
+): Promise<VerifiedShipmentResultWithUsage> {
   const { originalText, candidates, customerProfile } = input;
 
   // First, get the raw LLM classification (with customer context)
-  const rawShipment = await classifyShipment(input);
+  const classifyResult = await classifyShipment(input);
+  const rawShipment = classifyResult.shipment;
 
   // Normalize to properly scope refs to stops vs shipment-level
   const normalizationResult = normalizeShipment(rawShipment, originalText, candidates);
@@ -482,5 +600,6 @@ export async function classifyAndVerifyShipment(
     warnings: filteredWarnings,
     provenance: mergedProvenance,
     normalization: normalizationResult.metadata,
+    usage: classifyResult.usage,
   };
 }

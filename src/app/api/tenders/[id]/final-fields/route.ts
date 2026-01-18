@@ -1,7 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase";
-import { StructuredShipment, SuggestedRule, LearningEvent, CargoHints, CustomerProfile } from "@/lib/types";
+import { createServiceClient } from "@/lib/supabase/service";
+import { requireAuth, AuthError } from "@/lib/auth";
+import { StructuredShipment, SuggestedRule, LearningEvent, CargoHints, CustomerProfile, TenderStatus } from "@/lib/types";
 import { detectReclassifications, detectAllEdits, isRuleAlreadyLearned } from "@/lib/learning-detector";
+import { validateTransition } from "@/lib/state-machine";
+import { withIdempotency } from "@/lib/idempotency";
+import { withLock, TenderLockError } from "@/lib/tender-lock";
+import { retry, RetryPresets } from "@/lib/retry";
 
 // GET final fields for a tender
 export async function GET(
@@ -9,6 +15,7 @@ export async function GET(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    await requireAuth();
     const { id } = await params;
     const supabase = createServerClient();
 
@@ -28,6 +35,9 @@ export async function GET(
 
     return NextResponse.json({ final_fields: data || null });
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+    }
     console.error("API error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -39,6 +49,7 @@ export async function POST(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const authUser = await requireAuth();
     const { id: tenderId } = await params;
     const body = await request.json();
     const { shipment, customer_id, apply_suggested_rules } = body as {
@@ -46,6 +57,9 @@ export async function POST(
       customer_id?: string;
       apply_suggested_rules?: SuggestedRule[];
     };
+
+    // Get idempotency key from header
+    const idempotencyKey = request.headers.get("Idempotency-Key");
 
     if (!shipment) {
       return NextResponse.json(
@@ -55,6 +69,7 @@ export async function POST(
     }
 
     const supabase = createServerClient();
+    const serviceClient = createServiceClient();
 
     // Check if tender exists and get extraction run
     const { data: tender, error: tenderError } = await supabase
@@ -107,10 +122,11 @@ export async function POST(
           const alreadyLearned = isRuleAlreadyLearned(
             rule,
             customerProfile!.reference_label_rules || [],
-            customerProfile!.reference_regex_rules || []
+            customerProfile!.reference_regex_rules || [],
+            customerProfile!.reference_value_rules || []
           );
           if (alreadyLearned) {
-            console.log(`[Learning] Skipping already-learned rule: ${rule.label || rule.pattern} -> ${rule.subtype}`);
+            console.log(`[Learning] Skipping already-learned rule: ${rule.type}:${rule.label || rule.pattern} -> ${rule.subtype} (${rule.scope || "global"})`);
           }
           return !alreadyLearned;
         });
@@ -156,6 +172,8 @@ export async function POST(
         .update({
           shipment,
           updated_at: new Date().toISOString(),
+          updated_by: authUser.user.id,
+          reviewed_by: authUser.user.id,
         })
         .eq("id", existing.id)
         .select("id")
@@ -167,6 +185,7 @@ export async function POST(
         .insert({
           tender_id: tenderId,
           shipment,
+          reviewed_by: authUser.user.id,
         })
         .select("id")
         .single();
@@ -180,10 +199,22 @@ export async function POST(
       );
     }
 
+    // Validate state transition to reviewed
+    const currentStatus = tender.status as TenderStatus;
+    const allowedFromStatuses: TenderStatus[] = ["extracted", "needs_review", "reviewed", "export_failed"];
+    if (!allowedFromStatuses.includes(currentStatus)) {
+      return NextResponse.json({
+        error: `Cannot save final fields: tender is in '${currentStatus}' state`,
+        allowed_statuses: allowedFromStatuses,
+      }, { status: 400 });
+    }
+
     // Update tender status and customer assignment
     const tenderUpdates: Record<string, unknown> = {
-      status: "reviewed",
+      status: "reviewed" as TenderStatus,
       reviewed_at: new Date().toISOString(),
+      reviewed_by: authUser.user.id,
+      updated_by: authUser.user.id,
     };
 
     // Update customer_id if provided
@@ -191,12 +222,18 @@ export async function POST(
       tenderUpdates.customer_id = customer_id || null;
     }
 
-    await supabase.from("tenders").update(tenderUpdates).eq("id", tenderId);
+    await retry(
+      async () => {
+        const { error } = await supabase.from("tenders").update(tenderUpdates).eq("id", tenderId);
+        if (error) throw error;
+      },
+      RetryPresets.database
+    );
 
     // Apply suggested rules to customer profile if requested
     if (apply_suggested_rules?.length && effectiveCustomerId) {
       for (const rule of apply_suggested_rules) {
-        await applyRuleToCustomer(supabase, effectiveCustomerId, rule, tenderId);
+        await applyRuleToCustomer(supabase, effectiveCustomerId, rule, tenderId, authUser.user.id);
       }
     }
 
@@ -209,6 +246,9 @@ export async function POST(
       { status: existing ? 200 : 201 }
     );
   } catch (err) {
+    if (err instanceof AuthError) {
+      return NextResponse.json({ error: err.message }, { status: err.statusCode });
+    }
     console.error("API error:", err);
     return NextResponse.json({ error: "Internal server error" }, { status: 500 });
   }
@@ -347,17 +387,21 @@ async function applyLearnedCargoDefaults(
 
 /**
  * Apply a learned rule to the customer profile.
+ * Supports label, regex, and value_pattern rule types.
+ * 
+ * HARDENED: Includes lifecycle metadata (status, created_by, hits)
  */
 async function applyRuleToCustomer(
   supabase: ReturnType<typeof createServerClient>,
   customerId: string,
   rule: SuggestedRule,
-  tenderId: string
+  tenderId: string,
+  userId: string
 ) {
   // Fetch current customer profile
   const { data: customer, error } = await supabase
     .from("customer_profiles")
-    .select("reference_label_rules, reference_regex_rules")
+    .select("reference_label_rules, reference_regex_rules, reference_value_rules")
     .eq("id", customerId)
     .single();
 
@@ -370,7 +414,41 @@ async function applyRuleToCustomer(
     updated_at: new Date().toISOString(),
   };
 
-  if (rule.type === "label" && rule.label) {
+  if (rule.type === "value_pattern" && rule.pattern) {
+    // Value pattern rules (highest priority)
+    const existingRules = customer.reference_value_rules || [];
+    const existingIndex = existingRules.findIndex(
+      (r: { pattern: string; scope?: string }) => 
+        r.pattern === rule.pattern && (r.scope || "global") === (rule.scope || "global")
+    );
+
+    if (existingIndex >= 0) {
+      // Update confidence
+      existingRules[existingIndex].confidence = Math.min(
+        1,
+        existingRules[existingIndex].confidence + 0.1
+      );
+      existingRules[existingIndex].subtype = rule.subtype;
+    } else {
+      // Add new value pattern rule WITH lifecycle metadata
+      existingRules.push({
+        pattern: rule.pattern,
+        subtype: rule.subtype,
+        scope: rule.scope || "global",
+        priority: 0,
+        confidence: 0.5,
+        learned_from: tenderId,
+        created_at: new Date().toISOString(),
+        // Lifecycle metadata
+        status: "active",
+        created_by: userId,
+        hits: 0,
+      });
+    }
+
+    updates.reference_value_rules = existingRules;
+    console.log(`[Learning] Applied value_pattern rule: ${rule.pattern} -> ${rule.subtype} (${rule.scope || "global"})`);
+  } else if (rule.type === "label" && rule.label) {
     const existingRules = customer.reference_label_rules || [];
     const existingIndex = existingRules.findIndex(
       (r: { label: string }) => r.label.toLowerCase() === rule.label!.toLowerCase()
@@ -388,6 +466,7 @@ async function applyRuleToCustomer(
       existingRules.push({
         label: rule.label,
         subtype: rule.subtype,
+        scope: rule.scope || "global",
         confidence: 0.5,
         learned_from: tenderId,
         created_at: new Date().toISOString(),
@@ -395,6 +474,7 @@ async function applyRuleToCustomer(
     }
 
     updates.reference_label_rules = existingRules;
+    console.log(`[Learning] Applied label rule: "${rule.label}" -> ${rule.subtype} (${rule.scope || "global"})`);
   } else if (rule.type === "regex" && rule.pattern) {
     const existingRules = customer.reference_regex_rules || [];
     const existingIndex = existingRules.findIndex(
@@ -418,6 +498,7 @@ async function applyRuleToCustomer(
     }
 
     updates.reference_regex_rules = existingRules;
+    console.log(`[Learning] Applied regex rule: ${rule.pattern} -> ${rule.subtype}`);
   }
 
   await supabase.from("customer_profiles").update(updates).eq("id", customerId);
