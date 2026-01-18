@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   Tender,
   ExtractedCandidate,
@@ -16,6 +17,24 @@ import {
   CustomerProfile,
   SuggestedRule,
 } from "@/lib/types";
+
+// Dynamically import PDF viewer to avoid SSR issues
+const PdfViewer = dynamic(() => import("@/components/PdfViewer"), {
+  ssr: false,
+  loading: () => (
+    <div className="flex h-full items-center justify-center bg-gray-100 dark:bg-gray-800">
+      <div className="text-center">
+        <div className="mb-2 animate-spin">
+          <svg className="h-8 w-8 text-gray-400 mx-auto" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+        </div>
+        <p className="text-sm text-gray-500">Loading PDF viewer...</p>
+      </div>
+    </div>
+  ),
+});
 
 type LoadingState = "loading" | "loaded" | "error";
 type ViewMode = "structured" | "raw";
@@ -728,9 +747,11 @@ type OriginalViewMode = "document" | "text";
 function OriginalTenderPanel({
   tender,
   fileType,
+  fileName,
 }: {
   tender: Tender;
   fileType: string | null;
+  fileName?: string;
 }) {
   const [viewMode, setViewMode] = useState<OriginalViewMode>("document");
   const [pdfError, setPdfError] = useState(false);
@@ -781,10 +802,9 @@ function OriginalTenderPanel({
       {/* PDF Viewer or Text */}
       {viewMode === "document" && canShowDocument ? (
         <div className="rounded-lg border border-border bg-bg-secondary overflow-hidden" style={{ height: "600px" }}>
-          <iframe
-            src={`${tender.original_file_url}#toolbar=1&navpanes=0`}
-            className="w-full h-full"
-            title="Original tender document"
+          <PdfViewer
+            url={tender.original_file_url!}
+            fileName={fileName}
             onError={() => setPdfError(true)}
           />
         </div>
@@ -1358,6 +1378,7 @@ export default function ReviewPage() {
             <OriginalTenderPanel
               tender={tender}
               fileType={data?.extraction?.metadata?.file_type || null}
+              fileName={data?.extraction?.metadata?.file_name}
             />
           </div>
 
