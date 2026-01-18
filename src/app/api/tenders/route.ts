@@ -54,29 +54,27 @@ export async function POST(request: NextRequest) {
     // Compute text hash for deduplication
     const textHash = hashText(trimmedText);
 
-    // Check for duplicate text (same hash + customer within window)
-    if (customer_id) {
-      const serviceClient = createServiceClient();
-      const { data: existingTenderId } = await serviceClient.rpc(
-        "find_duplicate_tender_by_text_hash",
-        {
-          p_customer_id: customer_id,
-          p_text_hash: textHash,
-          p_window_days: DEDUPE_WINDOW_DAYS,
-        }
-      );
-
-      if (existingTenderId) {
-        console.log(`[Paste] Duplicate detected: ${existingTenderId}`);
-        return NextResponse.json(
-          {
-            id: existingTenderId,
-            deduped: true,
-            message: `Duplicate text detected. Returning existing tender from the last ${DEDUPE_WINDOW_DAYS} days.`,
-          },
-          { status: 200 }
-        );
+    // Check for duplicate text (works with or without customer - NULL matches NULL)
+    const serviceClient = createServiceClient();
+    const { data: existingTenderId } = await serviceClient.rpc(
+      "find_duplicate_tender_by_text_hash",
+      {
+        p_customer_id: customer_id || null,
+        p_text_hash: textHash,
+        p_window_days: DEDUPE_WINDOW_DAYS,
       }
+    );
+
+    if (existingTenderId) {
+      console.log(`[Paste] Duplicate detected: ${existingTenderId}`);
+      return NextResponse.json(
+        {
+          id: existingTenderId,
+          deduped: true,
+          message: `Duplicate text detected. Returning existing tender from the last ${DEDUPE_WINDOW_DAYS} days.`,
+        },
+        { status: 200 }
+      );
     }
 
     // Fetch customer profile if provided

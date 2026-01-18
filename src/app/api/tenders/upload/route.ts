@@ -63,28 +63,27 @@ export async function POST(request: NextRequest) {
     const fileHash = hashBuffer(buffer);
 
     // Check for duplicate file (same hash + customer within window)
-    if (customerId) {
-      const serviceClient = createServiceClient();
-      const { data: existingTenderId } = await serviceClient.rpc(
-        "find_duplicate_tender_by_file_hash",
-        {
-          p_customer_id: customerId,
-          p_file_hash: fileHash,
-          p_window_days: DEDUPE_WINDOW_DAYS,
-        }
-      );
-
-      if (existingTenderId) {
-        console.log(`[Upload] Duplicate detected: ${existingTenderId}`);
-        return NextResponse.json(
-          {
-            id: existingTenderId,
-            deduped: true,
-            message: `Duplicate file detected. Returning existing tender from the last ${DEDUPE_WINDOW_DAYS} days.`,
-          },
-          { status: 200 }
-        );
+    // Note: Deduplication works with or without customer - NULL customer_id matches NULL
+    const serviceClient = createServiceClient();
+    const { data: existingTenderId } = await serviceClient.rpc(
+      "find_duplicate_tender_by_file_hash",
+      {
+        p_customer_id: customerId || null,
+        p_file_hash: fileHash,
+        p_window_days: DEDUPE_WINDOW_DAYS,
       }
+    );
+
+    if (existingTenderId) {
+      console.log(`[Upload] Duplicate detected: ${existingTenderId}`);
+      return NextResponse.json(
+        {
+          id: existingTenderId,
+          deduped: true,
+          message: `Duplicate file detected. Returning existing tender from the last ${DEDUPE_WINDOW_DAYS} days.`,
+        },
+        { status: 200 }
+      );
     }
 
     // Check PDF page count before full parsing

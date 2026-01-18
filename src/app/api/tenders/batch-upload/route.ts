@@ -68,37 +68,35 @@ async function processSingleFile(
   // Compute file hash for deduplication
   const fileHash = hashBuffer(buffer);
 
-  // Check for duplicate file
-  if (customerId) {
-    const { data: existingTenderId } = await serviceClient.rpc(
-      "find_duplicate_tender_by_file_hash",
-      {
-        p_customer_id: customerId,
-        p_file_hash: fileHash,
-        p_window_days: DEDUPE_WINDOW_DAYS,
-      }
-    );
-
-    if (existingTenderId) {
-      console.log(`[BatchUpload] Duplicate detected for ${fileName}: ${existingTenderId}`);
-      
-      // Check if the existing tender is already reviewed
-      const { data: existingTender } = await supabase
-        .from("tenders")
-        .select("status")
-        .eq("id", existingTenderId)
-        .single();
-      
-      const state: BatchItemState = existingTender?.status === "reviewed" ? "reviewed" : "needs_review";
-      
-      return {
-        tender_id: existingTenderId,
-        file_name: fileName,
-        state,
-        deduped: true,
-        tender_status: existingTender?.status,
-      };
+  // Check for duplicate file (works with or without customer - NULL matches NULL)
+  const { data: existingTenderId } = await serviceClient.rpc(
+    "find_duplicate_tender_by_file_hash",
+    {
+      p_customer_id: customerId || null,
+      p_file_hash: fileHash,
+      p_window_days: DEDUPE_WINDOW_DAYS,
     }
+  );
+
+  if (existingTenderId) {
+    console.log(`[BatchUpload] Duplicate detected for ${fileName}: ${existingTenderId}`);
+    
+    // Check if the existing tender is already reviewed
+    const { data: existingTender } = await supabase
+      .from("tenders")
+      .select("status")
+      .eq("id", existingTenderId)
+      .single();
+    
+    const state: BatchItemState = existingTender?.status === "reviewed" ? "reviewed" : "needs_review";
+    
+    return {
+      tender_id: existingTenderId,
+      file_name: fileName,
+      state,
+      deduped: true,
+      tender_status: existingTender?.status,
+    };
   }
 
   // Check PDF page count
