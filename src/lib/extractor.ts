@@ -68,6 +68,10 @@ const NON_REFERENCE_LABELS = [
   /\$\s*\d/i, // Dollar amounts
   /\bload\s*temp/i,
   /\btrailer\s*type/i,
+  /\bmiles\s*:/i, // "Miles: 2448" - not a reference
+  /\bweight\s*:/i, // "Weight: 35840" - not a reference
+  /\btemp\s*:/i, // "Temp: -10" - not a reference
+  /\bpieces\s*:/i, // "Pieces: 1330" - not a reference
 ];
 
 /**
@@ -346,11 +350,68 @@ const PATTERNS: PatternConfig[] = [
     confidence: "high",
     valueGroup: 1,
   },
-  // Order #: 12345 -> Order
+  // Order #: 12345 -> Order (handles "Order Order:" Brakebush format too)
   {
-    pattern: /\border\s*[#:]\s*(\d{4,20})\b/gi,
+    pattern: /\border(?:\s+order)?\s*[#:]?\s*:?\s*(\d{4,20})\b/gi,
     type: "reference_number",
     subtype: "order",
+    confidence: "high",
+    valueGroup: 1,
+  },
+  // Reference: 8406730 -> Reference (Brakebush format)
+  {
+    pattern: /\breference\s*:\s*([A-Za-z0-9]{4,20})\b/gi,
+    type: "reference_number",
+    subtype: "reference",
+    confidence: "high",
+    valueGroup: 1,
+  },
+  // Shipper ref # L512210 -> Reference (TOPCO/e2open format)
+  {
+    pattern: /\bshipper\s+ref\s*#?\s*:?\s*([A-Za-z0-9]{4,20})\b/gi,
+    type: "reference_number",
+    subtype: "reference",
+    confidence: "high",
+    valueGroup: 1,
+  },
+  // Ref #(s) Shipments: 4502458490 -> Shipment reference (TOPCO format)
+  // Exclude common words like INFO, ORDER that might follow "Ref #(s)"
+  {
+    pattern: /\bref\s*#\(?s?\)?\s*:?\s*(?:shipments?\s*:?\s*)?(\d{6,20})\b/gi,
+    type: "reference_number",
+    subtype: "reference",
+    confidence: "high",
+    valueGroup: 1,
+  },
+  // loadID=200906660 in URLs -> Load ID (TOPCO format)
+  {
+    pattern: /\bloadID=(\d{6,15})\b/gi,
+    type: "reference_number",
+    subtype: "bol",
+    confidence: "high",
+    valueGroup: 1,
+  },
+  // Reference number: PO 8406730 -> PO (Brakebush format)
+  {
+    pattern: /\breference\s*number\s*:\s*(?:PO|po)\s+([A-Za-z0-9]{4,20})\b/gi,
+    type: "reference_number",
+    subtype: "po",
+    confidence: "high",
+    valueGroup: 1,
+  },
+  // Reference number: PU 19127010 -> Pickup number
+  {
+    pattern: /\breference\s*number\s*:\s*(?:PU|pu)\s+([A-Za-z0-9]{4,20})\b/gi,
+    type: "reference_number",
+    subtype: "pickup",
+    confidence: "high",
+    valueGroup: 1,
+  },
+  // Reference number: AC 1045823 -> Confirmation/Account
+  {
+    pattern: /\breference\s*number\s*:\s*(?:AC|ac)\s+([A-Za-z0-9]{4,20})\b/gi,
+    type: "reference_number",
+    subtype: "confirmation",
     confidence: "high",
     valueGroup: 1,
   },
@@ -566,16 +627,28 @@ export function extractCandidates(
       let usedCustomerRule = false;
 
       // For reference numbers, apply COMPREHENSIVE phone detection
-      // Phone exclusion ALWAYS wins - even over customer rules
+      // Phone exclusion ALWAYS wins - EXCEPT for high-confidence labeled patterns
+      // If a pattern has explicit subtype and high confidence (like "Load #: 121230"),
+      // we trust the label over heuristic-based phone detection
       if (config.type === "reference_number") {
         const phoneCheck = isDefinitelyPhone(value, text, match.index);
         if (phoneCheck.isPhone) {
-          ruleLog.skipped.push({
-            rule: "phone_exclusion",
-            candidate: value,
-            reason: phoneCheck.reason,
-          });
-          continue;
+          // For high-confidence patterns with explicit labels (subtype defined in pattern),
+          // only reject if it's DEFINITELY a phone by format (10-digit, explicit phone pattern)
+          // Trust explicit labels over heuristics like partial_phone or phone_label_nearby
+          const isHighConfidenceLabeled = config.confidence === "high" && config.subtype;
+          const isDefinitePhoneFormat = phoneCheck.reason === "matches_phone_pattern" || 
+                                        phoneCheck.reason === "10_digit_number";
+          
+          if (!isHighConfidenceLabeled || isDefinitePhoneFormat) {
+            ruleLog.skipped.push({
+              rule: "phone_exclusion",
+              candidate: value,
+              reason: phoneCheck.reason,
+            });
+            continue;
+          }
+          // Otherwise, trust the explicit label and continue processing
         }
         
         // Also check bounds - refs should be 4-25 chars
