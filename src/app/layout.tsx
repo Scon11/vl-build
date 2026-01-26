@@ -9,8 +9,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "VL Build",
-  description: "Internal load tender parsing and build tool",
+  title: "VL Suite",
+  description: "Vantage Logistics internal tools",
 };
 
 export default function RootLayout({

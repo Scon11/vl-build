@@ -7,6 +7,7 @@ import {
   NormalizationMetadata,
   FieldProvenanceMap,
   FieldProvenance,
+  CargoDetails,
 } from "./types";
 import { verifyShipment } from "./verifier";
 import { normalizeShipment } from "./normalizer";
@@ -320,9 +321,20 @@ Please structure this into a shipment schema. Remember: use null for any field n
   // Filter out bad references (phones, street numbers) from LLM output (defense in depth)
   const filtered = filterBadReferencesFromOutput(parsed);
 
-  // Add classification metadata
+  // Add classification metadata with defaults for required fields
+  const defaultCargo: CargoDetails = {
+    weight: { value: null, unit: null },
+    pieces: { count: null, type: null },
+    dimensions: null,
+    commodity: null,
+    temperature: null,
+  };
+  
   const shipment: StructuredShipment = {
-    ...filtered,
+    reference_numbers: filtered.reference_numbers || [],
+    stops: filtered.stops || [],
+    cargo: filtered.cargo || defaultCargo,
+    unclassified_notes: filtered.unclassified_notes || [],
     classification_metadata: {
       model: CLASSIFIER_MODEL,
       classified_at: new Date().toISOString(),

@@ -1,12 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
 
 type AuthMode = "login" | "signup";
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirect = searchParams.get("redirect") || "/";
@@ -66,9 +66,9 @@ export default function LoginPage() {
       <div className="max-w-md w-full mx-4">
         {/* Logo/Header */}
         <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold text-text-primary">VL Build</h1>
+          <h1 className="text-3xl font-bold text-text-primary">VL Suite</h1>
           <p className="mt-2 text-text-secondary">
-            Internal load tender parsing tool
+            Vantage Logistics internal tools
           </p>
         </div>
 
@@ -198,5 +198,17 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-bg-primary">
+        <div className="animate-spin h-8 w-8 border-4 border-accent border-t-transparent rounded-full" />
+      </div>
+    }>
+      <LoginForm />
+    </Suspense>
   );
 }

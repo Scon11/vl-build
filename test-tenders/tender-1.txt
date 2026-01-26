@@ -1,0 +1,186 @@
+200906660 - 01/19/2026 08:53
+Load Summary
+Shipper Carrier
+Load ID
+Load Group
+Current Type
+Current Status
+200906660
+TOPCO
+SPOT MARKET LOAD
+ACCEPTED
+TOPCO
+TWO PIERCE PLACE
+ITASCA, IL 60143 US
+Contact Zina Treutler
+847-329-3694
+Shipper ref # L512210
+VANTAGE LOGISTICS
+730 KINTNER PARKWAY
+SUNBURY, OH 43074 US
+Contact Mitch Chaffins 8442111470 Ext. 174
+Tender Carrier VLGL
+Load Details
+Transportation
+Mode TL : FROZEN Total Distance 630 mi
+Linear Space --
+Pallet Spaces --
+Density 13.67 pcf
+Lading Type OTHER
+Commodity --
+Excessive
+Valuation No
+Weight 10,319 lb10,319 lb
+Volume 755 cu ft 755 cu ft
+Pieces 1,374 1,374
+Pallets -- --
+* Actual values used for load
+calculations
+Equipment
+Required REEFER
+Temperature FROZEN
+Temperature
+Range
+0 to 0 degrees
+Fahrenheit
+Carrier
+Instructions
+--
+Hazmat No
+Pallet Exchange No
+Comments --
+Rate In Execution | Financial History | Request Rate Change
+PAYABLE 2,669.40 USD
+Details
+WEBSETTLE HOLDS --
+Stops - 1 Pick(s) / 1 Drop(s)
+Pick
+2002619
+FROZEN SPECIALTIES INC
+720 W. BARRE ROAD
+ARCHBOLD, OH 43502 US
+DON WILLIAMS 419-446-6508
+TRAFFICDEPT@FROZENSPECIALTIES. com
+Have reefer set to -10℉
+Weight 10,318.92 lb
+Volume 755 cu ft
+Pieces 1,374
+Pallets --
+Drop Trailer No
+Distance --
+PICK PLAN 01/23/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Ref #(s) Shipments: 4502458490
+Load Size
+Calculation Total Max Stop *
+Carrier Load Report
+1/19/26, 8:53 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200906660&dt=1768830834858 1/3
+
+Create Load Note
+Reply | Details
+Drop
+0002001434
+MITCHELL GROCERY CORPORATION
+809 LUSK ST
+ALBERTVILLE, AL 35950 US
+DELYNN BAUGH 256-891-5346
+DBAUGH@MITCHELLGROCERY.COM
+Weight 10,318.92 lb
+Volume 755 cu ft
+Pieces 1,374
+Pallets --
+Drop Trailer No
+Distance 630 mi
+DROP PLAN 01/26/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Ref #(s) Shipments: 4502458490
+Shipments
+4502458490
+Origin FROZEN SPECIALTIES INC
+ARCHBOLD, OH US
+Destination MITCHELL GROCERY
+CORPORATION
+ALBERTVILLE, AL US
+Create New Claim
+Weight 10,318.92 lb
+Volume 755 cu ft
+Density 13.67 pcf
+Pieces 1,374
+Pallets --
+Linear Space --
+Pallet Spaces --
+Pallet Exchange No
+Ship-With Ref #(s) --
+Customer
+MITCHELL
+GROCERY
+CORPORATION
+Supplier FROZEN
+SPECIALTIES INC
+Temperature FROZEN
+Comments --
+Shipping
+Status Code --
+Details
+Ref #(s) INFO: 450245849020251230, ORDER #: 4502458490, UNIQUE #: 05968, ORDER #: 0002220581, SALES ORDER #:
+0002220581
+Commodity Details
+4502458490 003680046750FRZ 929.76 lb-- 46 cu ft 78 0 FAK No FZ PIZZA BITES
+PEPPERONI 40CT
+4502458490 003680046751FRZ 929.76 lb-- 46 cu ft 78 0 FAK No FZ PIZZA BITES
+COMBINATION 40CT
+4502458490 019347600236FRZ 2,340 lb -- 191 cu ft 360 0 FAK No FZ PIZZA PEPPERONI
+4502458490 019347600238FRZ 585 lb -- 48 cu ft 90 0 FAK No FZ PIZZA COMBINATION
+4502458490 019347600239FRZ 1,170 lb -- 95 cu ft 180 0 FAK No FZ PIZZA 3 MEAT
+4502458490 003680046754FRZ 854.4 lb -- 44 cu ft 48 0 FAK No FZ PIZZA BITES
+COMBINATION 90CT
+4502458490 019347600240FRZ 1,170 lb -- 95 cu ft 180 0 FAK No FZ PIZZA SUPREME
+4502458490 019347600241FRZ 1,170 lb -- 95 cu ft 180 0 FAK No FZ PIZZA CHEESEBURGER
+4502458490 019347600242FRZ 1,170 lb -- 95 cu ft 180 0 FAK No FZ PIZZA 3 CHEESE
+Reason Codes
+Load Notes
+TMS ID 200906660(L512210) pallet count
+Zina Treutler (TOPCO)
+01/16/2026 17:01 EST
+16 plts
+Timeline Status: STARTED
+Milestone Categories
+Shipment
+Reference Product ID CommodityWeight
+Net
+Weight VolumePiecesLading
+Freight
+Class HazmatDescription
+1/19/26, 8:53 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200906660&dt=1768830834858 2/3
+
+pick up appointment
+Stops Deadline Date Checkpoints
+Type Check At Stop On Fail Evaluation Result
+FROZEN SPECIALTIES INC
+720 W. BARRE ROAD
+ARCHBOLD, OH 43502 US
+01/23/2026 00:00
+EST
+Warn 01/22/2026 00:00 EST No
+Alert 01/22/2026 00:00 EST No
+delivery appointment
+Stops Deadline Date Checkpoints
+Type Check At Stop On Fail Evaluation Result
+MITCHELL GROCERY CORPORATION
+809 LUSK ST
+ALBERTVILLE, AL 35950 US
+01/26/2026 00:00
+CST
+Warn 01/24/2026 00:00 CST No
+Alert 01/25/2026 00:00 CST No
+Attached Documents
+1/19/26, 8:53 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200906660&dt=1768830834858 3/3

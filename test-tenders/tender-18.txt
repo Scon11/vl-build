@@ -1,0 +1,42 @@
+Brakebush Transportation Inc.004261472901
+LOGON4993 6th Drive
+Westfield, WI 53964 Page 1
+800-981-1967 608-296-3762 Load Confirmation 0042614
+____________________________________________________________________________________________________________________________________________________
+Carrier: Vantage Logistics LLC Contact: Garrett Larkin
+Sunbury OH 43074 Phone:
+Date: 01/13/2026 Fax:
+____________________________________________________________________________________________________________________________________________________
+Order Order: 0042614 Commodity: FROZEN CHICKEN RUN AT -5
+Miles: 2414.0 Weight: 42488.2
+Temp: -5.0 -5.0 Pieces: 1330
+Trailer: Reefer (DAT) Reference: 5935808A
+_________________________________________________________________________________
+PU 1 Name: LINEAGE LOGISTICS Date: 01/16/2026 1000
+Address: 3776 TAYLORSVILLE HWY
+STATESVILLE NC 28625 Contact: CANDACE
+Phone: 704-838-1117 Driver Load: Live load
+Reference number: PO 5935808A 42488.2 LBS. 1330 Pieces
+Reference number: PU 19127090
+Reference number: SO 162530
+_________________________________________________________________________________
+SO 2 Name: US FOODS SOUTHERN CA Date: 01/20/2026 0100
+Address: 13250 PHILADELPHIA AVE
+FONTANA CA 92337 Contact: RECEIVING
+Phone: 800-423-4515 Driver Load: Live unload
+Reference number: AC 17271706
+Reference number: RP 3CNYAJ
+Reference number: SA 80543611
+____________________________________________________________________________________________________________________________________________________
+Payment Carrier Freight Pay: $3,400.00
+Total Carrier Pay: $3,400.00
+____________________________________________________________________________________________________________________________________________________
+Carrier Instructions and Requirements: This form must be completed and returned before driver can be loaded.
+LINEAGE LOGISTICS - PRE-COOL REEFER TO -5 DEGREES BEFORE ARRIVING TO SHIPPER TO AVOID
+WAITING LONGER THAN NECESSARY
+US FOODS SOUTHERN CA - LATE ARRIVALS WITHOUT AT LEAST A 3 HOUR PRIOR NOTICE WILL BE
+SUBJECT TO A LATE FEE PRIOR TO BEING UNLOADED
+ALL SEALS MUST BE INTACT AT RECEIVER OR PRODUCT MAY BE REJECTED
+___________________________________________________________________________________________________
+729010042614
+*BKBS-72901*

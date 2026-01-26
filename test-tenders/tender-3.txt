@@ -1,0 +1,182 @@
+200907333 - 01/19/2026 08:55
+Load Summary
+Shipper Carrier
+Load ID
+Load Group
+Current Type
+Current Status
+200907333
+TOPCO
+TENDER LOAD
+ACCEPTED
+TOPCO
+TWO PIERCE PLACE
+ITASCA, IL 60143 US
+Contact Zina Treutler 847-329-3694
+Shipper ref # L512229
+VANTAGE LOGISTICS
+730 KINTNER PARKWAY
+SUNBURY, OH 43074 US
+Contact Mitch Chaffins 8442111470 Ext. 174
+Tender Carrier VLGL
+Load Details
+Transportation
+Mode TL : STANDARD Total Distance 1,019 mi
+Linear Space --
+Pallet Spaces --
+Density 20.18 pcf
+Lading Type OTHER
+Commodity --
+Excessive
+Valuation No
+Weight 40,725 lb 40,725 lb
+Volume 2,018 cu
+ft
+2,018 cu ft
+Pieces 2,811 2,811
+Pallets -- --
+* Actual values used for load
+calculations
+Equipment
+Required REEFER
+Temperature FROZEN
+Temperature Range 0 to 0 degrees
+Fahrenheit
+Carrier Instructions --
+Hazmat No
+Pallet Exchange No
+Comments --
+Rate In Execution | Financial History | Request Rate Change
+PAYABLE 3,126.22 USD
+Details
+WEBSETTLE HOLDS --
+Stops - 1 Pick(s) / 1 Drop(s)
+Pick
+2005511
+SENECA FOODS (ROCHESTER PLNT) VG
+308 20TH ST SE
+ROCHESTER, MN 55904 US
+MICHELE SPITZER (507)280-4561
+MSPITZER@SENECAFOODS.COM
+Reefer temp minus 10
+Weight 40,725 lb
+Volume 2,018 cu ft
+Pieces 2,811
+Pallets --
+Drop Trailer No
+Distance --
+PICK PLAN 01/28/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Ref #(s) Shipments: 4502467095
+Drop
+0001000306
+AFI
+1401 W FARMERS AVE
+AMARILLO, TX 79118 US
+MANAGEDRECEIVING.CAPSTONELOGIS
+806-372-3851
+https://managedreceiving.capstonelogistics.com
+Weight 40,725 lb
+Volume 2,018 cu ft
+Pieces 2,811
+Pallets --
+Drop Trailer No
+Distance 1,019 mi
+DROP PLAN 01/30/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Load Size
+Calculation Total
+Max Stop
+*
+Ca e oad epo t1/19/26, 8:55 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907333&dt=1768830900666 1/3
+
+Ref #(s) Shipments: 4502467095
+Shipments
+4502467095
+Origin SENECA FOODS (ROCHESTER PLNT)
+VG
+ROCHESTER, MN US
+Destination AFI
+AMARILLO, TX US
+Create New Claim
+Weight 40,725 lb
+Volume 2,018 cu ft
+Density 20.18 pcf
+Pieces 2,811
+Pallets --
+Linear Space --
+Pallet Spaces --
+Pallet Exchange No
+Ship-With Ref #(s) --
+Customer AFI
+Supplier
+SENECA FOODS
+(ROCHESTER PLNT)
+VG
+Temperature FROZEN
+Comments --
+Shipping
+Status Code --
+Details
+Ref #(s) INFO: 450246709520260116, ORDER #: 4502467095, UNIQUE #: 996592, ORDER #: 0002228487, SALES ORDER #:
+0002228487
+Commodity Details
+4502467095 003680044105FRZ 3,200 lb -- 164 cu ft 160 0 FAK No FZ CORN WHOLE KERNEL
+SUPER SWEET
+4502467095 003680044119FRZ 3,200 lb -- 164 cu ft 160 0 FAK No FZ VEG MIXED
+4502467095 003680044110FRZ 3,200 lb -- 164 cu ft 160 0 FAK No FZ PEAS GREEN
+4502467095 003680044096FRZ 5,120 lb -- 262 cu ft 256 0 FAK No FZ BROCCOLI CUTS
+4502467095 003680033638FRZ 1,820 lb -- 110 cu ft 140 0 FAK No FZ CAULIFLOWER FLORETS
+4502467095 003680044098FRZ 4,550 lb -- 168 cu ft 350 0 FAK No FZ BROCCOLI FLORETS BABY
+4502467095 003680052803FRZ 975 lb -- 50 cu ft 75 0 FAK No FZ VEG SOUP MIX
+4502467095 003680044832FRZ 3,640 lb -- 221 cu ft 280 0 FAK No FZ VEG BROCC AND
+CAULIFLOWER
+4502467095 003680044831FRZ 4,160 lb -- 154 cu ft 320 0 FAK No FZ VEG CALIFORNIA BLEND
+(BROC,CAUL,CAR)
+4502467095 003680017305FRZ 2,340 lb -- 172 cu ft 180 0 FAK No FZ BROCCOLI SPEARS
+4502467095 003680044118FRZ 1,500 lb -- 81 cu ft 150 0 FAK No FZ VEG MIXED
+4502467095 003680060432FRZ 2,080 lb -- 123 cu ft 160 0 FAK No FZ OKRA WHOLE
+4502467095 003680052804FRZ 1,040 lb -- 43 cu ft 80 0 FAK No FZ VEG ITALIAN
+4502467095 003680077610FRZ 2,730 lb -- 101 cu ft 210 0 FAK No FZ SPINACH CUT LEAF
+4502467095 003680044097FRZ 1,170 lb -- 41 cu ft 130 0 FAK No FZ BROCCOLI CUTS STEAM
+EASY SUP
+Reason Codes
+Timeline Status: STARTED
+Milestone Categories
+pick up appointment
+Stops Deadline Date Checkpoints
+Type Check At Stop On Fail Evaluation Result
+SENECA FOODS (ROCHESTER PLNT) VG
+308 20TH ST SE
+ROCHESTER, MN 55904 US
+01/28/2026 00:00
+CST
+Warn 01/27/2026 00:00 CST No
+Alert 01/27/2026 00:00 CST No
+delivery appointment
+Shipment
+Reference Product ID CommodityWeight
+Net
+Weight VolumePiecesLading
+Freight
+Class HazmatDescription
+Ca e oad epo t1/19/26, 8:55 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907333&dt=1768830900666 2/3
+
+Stops Deadline Date Checkpoints
+Type Check At Stop On Fail Evaluation Result
+AFI
+1401 W FARMERS AVE
+AMARILLO, TX 79118 US
+01/30/2026 00:00 CST Warn 01/28/2026 00:00 CST No
+Alert 01/29/2026 00:00 CST No
+Attached Documents
+Ca e oad epo t1/19/26, 8:55 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907333&dt=1768830900666 3/3

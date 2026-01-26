@@ -1,0 +1,160 @@
+200907499 - 01/19/2026 08:53
+Load Summary
+Shipper Carrier
+Load ID
+Load Group
+Current Type
+Current Status
+200907499
+TOPCO
+TENDER LOAD
+ACCEPTED
+TOPCO
+TWO PIERCE PLACE
+ITASCA, IL 60143 US
+Contact Zina Treutler 847-329-3694
+Shipper ref # L512242
+VANTAGE LOGISTICS
+730 KINTNER PARKWAY
+SUNBURY, OH 43074 US
+Contact Mitch Chaffins 8442111470 Ext. 174
+Tender Carrier VLGL
+Load Details
+Transportation
+Mode TL : STANDARD Total Distance 580 mi
+Linear Space --
+Pallet Spaces --
+Density 33.46 pcf
+Lading Type OTHER
+Commodity --
+Excessive Valuation No
+Weight 9,504 lb 9,504 lb
+Volume 284 cu ft 284 cu ft
+Pieces 720 720
+Pallets -- --
+* Actual values used for load calculations
+Equipment
+Required REEFER
+Temperature REEFER
+Temperature Range 34 to 36 degrees
+Fahrenheit
+Carrier Instructions Continuous
+Operation
+Hazmat No
+Pallet Exchange No
+Comments --
+Rate In Execution | Financial History | Request Rate Change
+PAYABLE 0.00 USD
+Details
+WEBSETTLE HOLDS --
+Stops - 1 Pick(s) / 1 Drop(s)
+Pick
+2008461
+OLD WORLD CREAMERY-
+SCOTT’S OF WISCONSIN
+301 BROADWAY DRIVE
+SUN PRAIRIE, WI 53590 US
+BROOKE SHAEFFER
+BROOKE@OWCREAMERY.COM
+Monday – Friday 7am – 3pm for this location
+Weight 9,504 lb
+Volume 284 cu ft
+Pieces 720
+Pallets --
+Drop Trailer No
+Distance --
+PICK PLAN 01/28/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Ref #(s) Shipments: 4502466962
+Drop
+PC1900
+SCHREIBER LOGISTICS - SPRINGFIELD RDC
+3610 E KEARNEY ST
+BLDG 4
+SPRINGFIELD, MO 65803 US
+TOPCOAPPOINTMENTS@ schreiberfoods.com
+Receiving hours : Sunday-Wednesday: 6 a.m.-2
+a.m., Thursday-Saturday: 6 a.m.-6 p.m.
+Weight 9,504 lb
+Volume 284 cu ft
+Pieces 720
+Pallets --
+Drop Trailer No
+Distance 580 mi
+DROP PLAN 02/04/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Load Size
+Calculation Total Max Stop *
+Carrier Load Report
+1/19/26, 8:53 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907499&dt=1768830783620 1/2
+
+Ref #(s) Shipments: 4502466962
+Shipments
+4502466962
+Origin OLD WORLD CREAMERY-
+SUN PRAIRIE, WI US
+Destination SCHREIBER LOGISTICS - SPRINGFIELD
+RDC
+SPRINGFIELD, MO US
+Create New Claim
+Weight 9,504 lb
+Volume 284 cu ft
+Density 33.46 pcf
+Pieces 720
+Pallets --
+Linear Space --
+Pallet Spaces --
+Pallet Exchange No
+Ship-With Ref #(s) --
+Customer SCHREIBER
+LOGISTICS
+Supplier OLD WORLD
+CREAMERY
+Temperature REEFER
+Comments --
+Shipping Status
+Code --
+Details
+Ref #(s) INFO: 450246696220260115, ORDER #: 4502466962
+Commodity Details
+4502466962 001122535388RFR 9,504 lb -- 284 cu ft 720 0 FAK No BUTTER SALTED HANDROLLED
+AMISH STYLE
+Reason Codes
+Timeline Status: STARTED
+Milestone Categories
+pick up appointment
+Stops Deadline Date Checkpoints
+Type Check At Stop On Fail Evaluation Result
+OLD WORLD CREAMERY-
+SCOTT’S OF WISCONSIN
+301 BROADWAY DRIVE
+SUN PRAIRIE, WI 53590 US
+01/28/2026 00:00 UTC Warn 01/27/2026 00:00 UTC No
+Alert 01/27/2026 00:00 UTC No
+delivery appointment
+Stops Deadline Date Checkpoints
+Type Check At Stop On Fail Evaluation Result
+SCHREIBER LOGISTICS - SPRINGFIELD RDC
+3610 E KEARNEY ST
+BLDG 4
+SPRINGFIELD, MO 65803 US
+02/04/2026 00:00
+CST
+Warn 02/02/2026 00:00 CST No
+Alert 02/03/2026 00:00 CST No
+Attached Documents
+Shipment
+Reference Product ID CommodityWeight
+Net
+Weight VolumePiecesLading
+Freight
+Class HazmatDescription
+1/19/26, 8:53 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907499&dt=1768830783620 2/2

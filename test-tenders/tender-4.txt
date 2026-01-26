@@ -1,0 +1,305 @@
+200907342 - 01/19/2026 08:54
+Load Summary
+Shipper Carrier
+Load ID
+Load Group
+Current Type
+Current Status
+200907342
+TOPCO
+TENDER LOAD
+ACCEPTED
+TOPCO
+TWO PIERCE PLACE
+ITASCA, IL 60143 US
+Contact Zina Treutler
+847-329-3694
+Shipper ref # L512235
+VANTAGE LOGISTICS
+730 KINTNER PARKWAY
+SUNBURY, OH 43074 US
+Contact Mitch Chaffins 8442111470 Ext. 174
+Tender Carrier VLGL
+Load Details
+Transportation
+Mode TL : STANDARD Total Distance 2,859 mi
+Linear Space --
+Pallet Spaces --
+Density 22.32 pcf
+Lading Type OTHER
+Commodity --
+Excessive
+Valuation No
+Weight 28,013 lb 28,013 lb
+Volume 1,255 cu
+ft
+1,255 cu ft
+Pieces 2,304 2,304
+Pallets -- --
+* Actual values used for load
+calculations
+Equipment
+Required VAN
+Temperature DRY
+Temperature
+Range
+0 to 0 degrees
+Fahrenheit
+Carrier
+Instructions
+--
+Hazmat No
+Pallet Exchange No
+Comments --
+Rate In Execution | Financial History | Request Rate Change
+PAYABLE 4,976.42 USD
+Details
+WEBSETTLE HOLDS --
+Stops - 3 Pick(s) / 1 Drop(s)
+Pick
+2006814
+GEL SPICE COMPANY, INC.
+1 COMMERCE ST
+BAYONNE, NJ 07002 US
+OTECOMMERCEAPPOINTMENT@OFI.COM
+201-339-0700
+Weight 4,688.16 lb
+Volume 145 cu ft
+Pieces 674
+Pallets --
+Drop Trailer No
+Distance --
+PICK PLAN 01/30/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Ref #(s) Shipments: 4502458077
+Pick
+2001732
+COLONNA BROTHERS INC.
+77 METRO WAY
+SECAUCUS, NJ 07094 US
+LISETTE AVILES 201-864-1115 Ext 218
+Weight 13,104 lb
+Volume 763 cu ft
+Pieces 1,152
+Pallets --
+Drop Trailer No
+Distance 11 mi
+PICK PLAN 01/27/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Load Size
+Calculation Total
+Max Stop
+*
+Carrier Load Report
+1/19/26, 8:54 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907342&dt=1768830858965 1/4
+
+Hours of Operation: 7AM – 4PM Monday
+through Friday
+Ref #(s) Shipments: 4502458067
+Pick
+2001881
+CRESCENT MANUFACTURING
+10285 EAGLE DR
+NORTH COLLINS, NY 14111 US
+716-337-0145
+Weight 10,220.8 lb
+Volume 347 cu ft
+Pieces 478
+Pallets --
+Drop Trailer No
+Distance 379 mi
+PICK PLAN 01/27/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Ref #(s) Shipments: 4502458068
+Drop
+0002001737
+STATER BROS MARKETS
+311 SOUTH TIPPECANOE AVE
+SAN BERNARDINO, CA 92408 US
+909-733-5608
+WWW.NCRPOWERTRAFFIC.COM
+Weight 28,012.96 lb
+Volume 1,255 cu ft
+Pieces 2,304
+Pallets --
+Drop Trailer No
+Distance 2,469 mi
+DROP PLAN 02/01/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Ref #(s) Shipments: 4502458077, 4502458067, 4502458068
+Shipments
+4502458077
+Origin GEL SPICE COMPANY, INC.
+BAYONNE, NJ US
+Destination STATER BROS MARKETS
+SAN BERNARDINO, CA US
+Create New Claim
+Weight 4,688.16 lb
+Volume 145 cu ft
+Density 32.33 pcf
+Pieces 674
+Pallets --
+Linear Space --
+Pallet Spaces --
+Pallet Exchange No
+Ship-With Ref #(s) --
+Customer STATER BROS
+MARKETS
+Supplier GEL SPICE
+COMPANY, INC.
+Temperature DRY
+Comments --
+Shipping Status
+Code --
+Details
+Ref #(s) INFO: 450245807720251229, ORDER #: 4502458077, UNIQUE #: 11050729, ORDER #: 0002220173, SALES
+ORDER #: 0002220173
+4502458067
+Origin COLONNA BROTHERS INC.
+SECAUCUS, NJ US
+Destination STATER BROS MARKETS
+SAN BERNARDINO, CA US
+Create New Claim
+Weight 13,104 lb
+Volume 763 cu ft
+Density 17.17 pcf
+Pieces 1,152
+Pallets --
+Linear Space --
+Pallet Spaces --
+Pallet Exchange No
+Ship-With Ref #(s) --
+Customer STATER BROS
+MARKETS
+Supplier COLONNA
+BROTHERS INC
+Temperature DRY
+Comments --
+Shipping Status
+Code --
+1/19/26, 8:54 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907342&dt=1768830858965 2/4
+
+Details
+Ref #(s) INFO: 450245806720251229, ORDER #: 4502458067, UNIQUE #: 11050728, ORDER #: 0002220171, SALES
+ORDER #: 0002220171
+4502458068
+Origin CRESCENT MANUFACTURING
+NORTH COLLINS, NY US
+Destination STATER BROS MARKETS
+SAN BERNARDINO, CA US
+Create New Claim
+Weight 10,220.8 lb
+Volume 347 cu ft
+Density 29.45 pcf
+Pieces 478
+Pallets --
+Linear Space --
+Pallet Spaces --
+Pallet Exchange No
+Ship-With Ref #(s) --
+Customer STATER BROS
+MARKETS
+Supplier CRESCENT
+MANUFACTURING
+Temperature DRY
+Comments --
+Shipping
+Status Code --
+Details
+Ref #(s) INFO: 450245806820251229, ORDER #: 4502458068, UNIQUE #: 11050730, ORDER #: 0002220177, SALES
+ORDER #: 0002220177
+Commodity Details
+4502458067 007417511354DRY 8,064 lb -- 381 cu ft 576 0 FAK No BREAD CRUMBS ITALIAN
+4502458067 007417511220DRY 4,200 lb -- 318 cu ft 480 0 FAK No BREAD CRUMBS PANKO
+PLAIN
+4502458067 007417511221DRY 840 lb -- 64 cu ft 96 0 FAK No BREAD CRUMBS PANKO
+ITALIAN
+4502458068 001122501195DRY 1,770 lb -- 72 cu ft 60 0 FAK No BD LAUNDRY DETRGNT
+LIQ FREE AND CLEAR
+4502458068 001122501196DRY 1,770 lb -- 72 cu ft 60 0 FAK No BD LAUNDRY
+DETERGENT LIQ
+LAVENDER
+4502458068 001122501188DRY 736 lb -- 21 cu ft 64 0 FAK No BD DISH DETERGENT LIQ
+FREE AND CLEAR
+4502458068 001122500112DRY 2,044.8 lb-- 62 cu ft 144 0 FAK No DISH DETERGENT LIQ
+ULTRA GRN APP ANTIBAC
+4502458068 001122500116DRY 1,950 lb -- 60 cu ft 75 0 FAK No DISH DETERGENT LIQ
+ULTRA BLUE
+4502458068 001122500117DRY 1,950 lb -- 60 cu ft 75 0 FAK No DISH DETERGENT LIQ
+ULTRA GRN APP ANTIBAC
+4502458077 019347600343DRY 1,680 lb -- 49 cu ft 200 0 FAK No VANILLA EXTRACT
+IMITATION
+4502458077 003680048845DRY 396 lb -- 24 cu ft 150 0 FAK No SEASONING POPCORN
+NACHO
+4502458077 003680004556DRY 974.16 lb -- 30 cu ft 198 0 FAK No SALT AND PEPPER
+SHAKER SET
+4502458077 007611463015DRY 1,638 lb -- 42 cu ft 126 0 FAK No SALT SEA KOSHER
+Reason Codes
+Timeline Status: STARTED
+Milestone Categories
+pick up appointment
+Stops Deadline Date Checkpoints
+Shipment
+Reference Product ID CommodityWeight
+Net
+Weight VolumePiecesLading
+Freight
+Class HazmatDescription
+1/19/26, 8:54 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907342&dt=1768830858965 3/4
+
+Type Check At Stop On
+Fail
+Evaluation
+Result
+COLONNA BROTHERS INC.
+77 METRO WAY
+SECAUCUS, NJ 07094 US
+01/27/2026 00:00
+EST
+Warn 01/26/2026 00:00 EST No
+Alert 01/26/2026 00:00 EST No
+CRESCENT MANUFACTURING
+10285 EAGLE DR
+NORTH COLLINS, NY 14111 US
+01/27/2026 00:00
+EST
+Warn 01/26/2026 00:00 EST No
+Alert 01/26/2026 00:00 EST No
+GEL SPICE COMPANY, INC.
+1 COMMERCE ST
+BAYONNE, NJ 07002 US
+01/30/2026 00:00
+EST
+Warn 01/29/2026 00:00 EST No
+Alert 01/29/2026 00:00 EST No
+delivery appointment
+Stops Deadline Date Checkpoints
+Type Check At Stop On
+Fail
+Evaluation
+Result
+STATER BROS MARKETS
+311 SOUTH TIPPECANOE AVE
+SAN BERNARDINO, CA 92408 US
+02/01/2026 00:00
+PST
+Warn 01/30/2026 00:00 PST No
+Alert 01/31/2026 00:00 PST No
+Attached Documents
+1/19/26, 8:54 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907342&dt=1768830858965 4/4

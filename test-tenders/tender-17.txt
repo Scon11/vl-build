@@ -1,0 +1,41 @@
+Brakebush Transportation Inc.004189271710
+LOGON4993 6th Drive
+Westfield, WI 53964 Page 1
+800-981-1967 608-296-3762 Load Confirmation 0041892
+____________________________________________________________________________________________________________________________________________________
+Carrier: Vantage Logistics LLC Contact: Garrett Larkin
+Sunbury OH 43074 Phone:
+Date: 01/13/2026 Fax:
+____________________________________________________________________________________________________________________________________________________
+Order Order: 0041892 Commodity: FROZEN CHICKEN RUN AT -10 CONTINUO
+Miles: 2448.0 Weight: 35840.0
+Temp: -10.0 -10.0 Pieces: 0
+Trailer: Reefer (DAT) Reference: 8406730
+_________________________________________________________________________________
+PU 1 Name: LINEAGE LOGISTICS Date: 01/16/2026 1030
+Address: 3776 TAYLORSVILLE HWY
+STATESVILLE NC 28625 Contact: CANDACE
+Phone: 704-838-1117 Driver Load: Live load
+Reference number: PO 8406730 35840.0 LBS.
+Reference number: PU 19127010
+_________________________________________________________________________________
+SO 2 Name: BLUE LINE Date: 01/20/2026 0800
+Address: 1400 SOUTH ALLEC STREET
+ANAHEIM CA 92805 Contact: N/A
+Phone: 714-829-1700 x3 Driver Load: Live unload
+Reference number: AC 1045823
+____________________________________________________________________________________________________________________________________________________
+Payment Carrier Freight Pay: $3,400.00
+Total Carrier Pay: $3,400.00
+____________________________________________________________________________________________________________________________________________________
+Carrier Instructions and Requirements: This form must be completed and returned before driver can be loaded.
+LINEAGE LOGISTICS - PRE-COOL REEFER TO -10 DEGREES BEFORE ARRIVING TO SHIPPER TO AVOID
+WAITING LONGER THAN NECESSARY
+*****VERY IMPORTANT*****
+MUST RUN REEFER AT -10 DEGREES CONTINUOUS WHILE UNDER THIS LOAD
+BLUE LINE - LATE ARRIVALS WITHOUT AT LEAST A 3 HOUR PRIOR NOTICE WILL BE SUBJECT TO A LATE
+FEE PRIOR TO BEING UNLOADED
+ALL SEALS MUST BE INTACT AT RECEIVER OR PRODUCT MAY BE REJECTED
+___________________________________________________________________________________________________
+717100041892
+*BKBS-71710*

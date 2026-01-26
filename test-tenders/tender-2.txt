@@ -1,0 +1,264 @@
+200907215 - 01/19/2026 08:54
+Load Summary
+Shipper Carrier
+Load ID
+Load Group
+Current Type
+Current Status
+200907215
+TOPCO
+TENDER LOAD
+ACCEPTED
+TOPCO
+TWO PIERCE PLACE
+ITASCA, IL 60143 US
+Contact Zina Treutler 847-329-3694
+Shipper ref # L512225
+VANTAGE LOGISTICS
+730 KINTNER PARKWAY
+SUNBURY, OH 43074 US
+Contact Mitch Chaffins 8442111470 Ext. 174
+Tender Carrier VLGL
+Load Details
+Transportation
+Mode TL : STANDARD Total Distance 667 mi
+Linear Space --
+Pallet Spaces --
+Density 28.25 pcf
+Lading Type OTHER
+Commodity --
+Excessive Valuation No
+Weight 32,090 lb 32,090 lb
+Volume 1,136 cu
+ft
+1,136 cu ft
+Pieces 2,816 2,816
+Pallets -- --
+* Actual values used for load calculations
+Equipment
+Required REEFER
+Temperature REEFER
+Temperature Range 34 to 36 degrees
+Fahrenheit
+Carrier Instructions Continuous
+Operation
+Hazmat No
+Pallet Exchange No
+Comments --
+Rate In Execution | Financial History | Request Rate Change
+PAYABLE 1,908.46 USD
+Details
+WEBSETTLE HOLDS --
+Stops - 2 Pick(s) / 1 Drop(s)
+Pick
+2002846
+GRASSLAND DAIRY PRODUCTS
+N8790 FAIRGROUND AVE
+GREENWOOD, WI 54437 US
+Weight 15,562.5 lb
+Volume 379 cu ft
+Pieces 815
+Pallets --
+Drop Trailer No
+Distance --
+PICK PLAN 01/27/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Ref #(s) Shipments: 4502466707
+Pick
+2006482
+WESTBY - WESTBY
+615 NORTH MAIN STREET
+WESTBY, WI 54667 US
+608-634-3181
+Weight 16,527 lb
+Volume 757 cu ft
+Pieces 2,001
+Pallets --
+Drop Trailer No
+Distance 95 mi
+PICK PLAN 01/27/2026 00:00
+APPT -- --
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Ref #(s) Shipments: 4502466723, 4502466724
+Drop Weight 32,089.5 lb
+Volume 1,136 cu ft
+DROP PLAN 01/28/2026 00:00
+APPT -- --
+Load Size
+Calculation Total
+Max Stop
+*
+Carrier Load Report
+1/19/26, 8:54 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907215&dt=1768830875886 1/3
+
+PC1900
+SCHREIBER LOGISTICS - SPRINGFIELD RDC
+3610 E KEARNEY ST
+BLDG 4
+SPRINGFIELD, MO 65803 US
+TOPCOAPPOINTMENTS@ schreiberfoods.com
+Receiving hours : Sunday-Wednesday: 6 a.m.-2
+a.m., Thursday-Saturday: 6 a.m.-6 p.m.
+Pieces 2,816
+Pallets --
+Drop Trailer No
+Distance 572 mi
+ETA -- --
+ARRIVAL -- --
+DEPARTURE -- --
+Ref #(s) Shipments: 4502466707, 4502466723, 4502466724
+Shipments
+4502466707
+Origin GRASSLAND DAIRY PRODUCTS
+GREENWOOD, WI US
+Destination SCHREIBER LOGISTICS - SPRINGFIELD
+RDC
+SPRINGFIELD, MO US
+Create New Claim
+Weight 15,562.5 lb
+Volume 379 cu ft
+Density 41.06 pcf
+Pieces 815
+Pallets --
+Linear Space --
+Pallet Spaces --
+Pallet Exchange No
+Ship-With Ref #(s) --
+Customer SCHREIBER
+LOGISTICS
+Supplier GRASSLAND DAIRY
+PRODUCTS INC
+Temperature REEFER
+Comments --
+Shipping Status
+Code --
+Details
+Ref #(s) INFO: 450246670720260115, ORDER #: 4502466707
+4502466723
+Origin WESTBY - WESTBY
+WESTBY, WI US
+Destination SCHREIBER LOGISTICS - SPRINGFIELD
+RDC
+SPRINGFIELD, MO US
+Create New Claim
+Weight 1,889.16 lb
+Volume 86 cu ft
+Density 21.97 pcf
+Pieces 258
+Pallets --
+Linear Space --
+Pallet Spaces --
+Pallet Exchange No
+Ship-With Ref #(s) --
+Customer SCHREIBER
+LOGISTICS
+Supplier
+WESTBY
+COOPERATIVE
+CREAMERY
+Temperature REEFER
+Comments --
+Shipping Status
+Code --
+Details
+Ref #(s) INFO: 450246672320260115, ORDER #: 4502466723
+4502466724
+Origin WESTBY - WESTBY
+WESTBY, WI US
+Destination SCHREIBER LOGISTICS - SPRINGFIELD
+RDC
+SPRINGFIELD, MO US
+Create New Claim
+Weight 14,637.84 lb
+Volume 671 cu ft
+Density 21.82 pcf
+Pieces 1,743
+Pallets --
+Linear Space --
+Pallet Spaces --
+Pallet Exchange No
+Ship-With Ref #(s) --
+Customer SCHREIBER
+LOGISTICS
+Supplier
+WESTBY
+COOPERATIVE
+CREAMERY
+Temperature REEFER
+Comments --
+Shipping Status
+Code --
+Details
+Ref #(s) INFO: 450246672420260115, ORDER #: 4502466724
+Commodity Details
+1/19/26, 8:54 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907215&dt=1768830875886 2/3
+
+Create Load Note
+Reply | Details
+4502466707 003680029934RFR 1,050 lb -- 47 cu ft 140 0 FAK No BUTTER SPREADABLE
+W/CANOLA OIL
+4502466707 003680039317RFR 1,620 lb -- 68 cu ft 180 0 FAK No BUTTER SPREADABLE
+W/CANOLA OIL
+4502466707 003680009507RFR 585 lb -- 12 cu ft 30 0 FAK No BUTTER AA SALTED QTRS
+SHIELD
+4502466707 003680021016RFR 5,557.5 lb -- 114 cu ft 285 0 FAK No BUTTER AA UNSALTED QTRS
+SHIELD
+4502466707 003680011016RFR 6,750 lb -- 138 cu ft 180 0 FAK No BUTTER AA SALTED QTRS
+SHIELD
+4502466723 003680020015RFR 1,494.08 lb-- 58 cu ft 224 0 FAK No CCN SOUR CREAM
+4502466723 003680047969RFR 395.08 lb -- 28 cu ft 34 0 FAK No CCN SOUR CREAM SQUEEZE
+4502466724 003680047969RFR 4,148.34 lb-- 294 cu ft 357 0 FAK No SOUR CREAM SQUEEZE
+4502466724 003680000575RFR 956.48 lb -- 33 cu ft 98 0 FAK No SOUR CREAM
+4502466724 084279810681RFR 3,552.64 lb-- 122 cu ft 364 0 FAK No SOUR CREAM
+4502466724 003680000344RFR 1,518.44 lb-- 55 cu ft 238 0 FAK No SOUR CREAM
+4502466724 084279810723RFR 2,500.96 lb-- 91 cu ft 392 0 FAK No SOUR CREAM
+4502466724 003680020015RFR 1,027.18 lb-- 40 cu ft 154 0 FAK No SOUR CREAM
+4502466724 084279810247RFR 933.8 lb -- 36 cu ft 140 0 FAK No SOUR CREAM
+Reason Codes
+Load Notes
+TMS ID 200907215(L512225) pallet count
+Zina Treutler (TOPCO)
+01/16/2026 17:11 EST
+westby should be 12 pallets grassland should be 9 pallets
+Timeline Status: STARTED
+Milestone Categories
+pick up appointment
+Stops Deadline Date Checkpoints
+Type Check At Stop On Fail Evaluation Result
+GRASSLAND DAIRY PRODUCTS
+N8790 FAIRGROUND AVE
+GREENWOOD, WI 54437 US
+01/27/2026 00:00 CST Warn 01/26/2026 00:00 CST No
+Alert 01/26/2026 00:00 CST No
+WESTBY - WESTBY
+615 NORTH MAIN STREET
+WESTBY, WI 54667 US
+01/27/2026 00:00 CST Warn 01/26/2026 00:00 CST No
+Alert 01/26/2026 00:00 CST No
+delivery appointment
+Stops Deadline Date Checkpoints
+Type Check At Stop On Fail Evaluation Result
+SCHREIBER LOGISTICS - SPRINGFIELD RDC
+3610 E KEARNEY ST
+BLDG 4
+SPRINGFIELD, MO 65803 US
+01/28/2026 00:00
+CST
+Warn 01/26/2026 00:00 CST No
+Alert 01/27/2026 00:00 CST No
+Attached Documents
+Shipment
+Reference Product ID CommodityWeight
+Net
+Weight VolumePiecesLading
+Freight
+Class HazmatDescription
+1/19/26, 8:54 AM Load Report
+https://na-app.tms.e2open.com/LoadReport2.jsp?inpopup=y&loadID=200907215&dt=1768830875886 3/3
