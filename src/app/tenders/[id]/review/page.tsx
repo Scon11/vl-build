@@ -321,11 +321,11 @@ function EditableStopCard({
   const isPickup = stop.type === "pickup";
   const pathPrefix = `stops[${stopIndex}]`;
   const hasStopWarnings = hasWarningForPath(warnings, pathPrefix);
-  const borderColor = isPickup ? "border-l-blue-500" : "border-l-green-500";
+  const borderColor = isPickup ? "border-l-cyan-400" : "border-l-green-400";
   const typeLabel = isPickup ? "PICKUP" : "DELIVERY";
   const typeBg = isPickup
-    ? "bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-400"
-    : "bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400";
+    ? "bg-cyan-500/20 text-cyan-400 border border-cyan-500/30"
+    : "bg-green-500/20 text-green-400 border border-green-500/30";
 
   // Auto-resize notes textarea up to max height
   useEffect(() => {
@@ -382,7 +382,7 @@ function EditableStopCard({
   };
 
   return (
-    <div className={`rounded-lg border border-l-4 ${borderColor} ${hasStopWarnings ? "border-yellow-400 bg-yellow-50/50 dark:bg-yellow-900/10" : "border-border bg-bg-secondary"} p-4`}>
+    <div className={`rounded-xl border border-l-4 ${borderColor} ${hasStopWarnings ? "border-yellow-400 bg-yellow-900/10" : "glass-card"} p-5`}>
       {/* Stop header with type badge */}
       <div className="mb-3 flex items-center gap-2">
         <span className={`rounded px-2 py-0.5 text-xs font-bold ${typeBg}`}>
@@ -407,7 +407,7 @@ function EditableStopCard({
             value={stop.location.name || ""}
             onChange={(e) => updateLocation("name", e.target.value)}
             placeholder="Facility / Company name"
-            className={`flex-1 rounded border bg-bg-input px-2 py-1.5 text-sm font-medium text-text-primary placeholder:text-text-muted focus:outline-none ${getWarningForPath(warnings, `${pathPrefix}.location.name`) ? "border-yellow-400" : "border-border focus:border-accent"}`}
+            className={`flex-1 rounded-lg border bg-white/5 px-3 py-2 text-sm font-medium text-white placeholder:text-gray-500 focus:outline-none transition-all ${getWarningForPath(warnings, `${pathPrefix}.location.name`) ? "border-yellow-400" : "border-white/10 focus:border-cyan-400/50 focus:shadow-[0_0_10px_rgba(0,240,255,0.1)]"}`}
           />
           <WarningIndicator warning={getWarningForPath(warnings, `${pathPrefix}.location.name`)} />
         </div>
@@ -419,7 +419,7 @@ function EditableStopCard({
             value={stop.location.address || ""}
             onChange={(e) => updateLocation("address", e.target.value)}
             placeholder="Street address"
-            className={`flex-1 rounded border bg-bg-input px-2 py-1.5 text-sm text-text-primary placeholder:text-text-muted focus:outline-none ${getWarningForPath(warnings, `${pathPrefix}.location.address`) ? "border-yellow-400" : "border-border focus:border-accent"}`}
+            className={`flex-1 rounded-lg border bg-white/5 px-3 py-2 text-sm text-white placeholder:text-gray-500 focus:outline-none transition-all ${getWarningForPath(warnings, `${pathPrefix}.location.address`) ? "border-yellow-400" : "border-white/10 focus:border-cyan-400/50 focus:shadow-[0_0_10px_rgba(0,240,255,0.1)]"}`}
           />
           <WarningIndicator warning={getWarningForPath(warnings, `${pathPrefix}.location.address`)} />
         </div>
@@ -613,10 +613,10 @@ function EditableCargoCard({
   const hasCargoWarnings = hasWarningForPath(warnings, "cargo");
   
   return (
-    <div className={`rounded-lg border border-l-4 border-l-orange-500 ${hasCargoWarnings ? "border-yellow-400 bg-yellow-50/50 dark:bg-yellow-900/10" : "border-border bg-bg-secondary"} p-4`}>
+    <div className={`rounded-xl border border-l-4 border-l-orange-400 ${hasCargoWarnings ? "border-yellow-400 bg-yellow-900/10" : "glass-card"} p-5`}>
       {/* Cargo header with type badge */}
       <div className="mb-3 flex items-center gap-2">
-        <span className="rounded px-2 py-0.5 text-xs font-bold bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-400">
+        <span className="rounded-full px-3 py-1 text-xs font-bold bg-orange-500/20 text-orange-400 border border-orange-500/30">
           CARGO DETAILS
         </span>
         {hasCargoWarnings && (
@@ -1495,14 +1495,11 @@ export default function ReviewPage() {
 
   if (loadingState === "loading") {
     return (
-      <div className="min-h-screen bg-bg-primary">
+      <div className="min-h-screen bg-hero-gradient">
         <div className="mx-auto max-w-6xl px-6 py-8">
-          <div className="flex items-center justify-center py-20">
-            <svg className="h-8 w-8 animate-spin text-accent" viewBox="0 0 24 24" fill="none">
-              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-            </svg>
-            <span className="ml-3 text-text-secondary">Processing tender...</span>
+          <div className="flex flex-col items-center justify-center py-20">
+            <div className="w-12 h-12 rounded-full border-4 border-cyan-400 border-t-transparent animate-spin mb-4 shadow-[0_0_20px_rgba(0,240,255,0.3)]" />
+            <span className="text-gray-400">Processing tender...</span>
           </div>
         </div>
       </div>
@@ -1511,12 +1508,12 @@ export default function ReviewPage() {
 
   if (loadingState === "error" || !data) {
     return (
-      <div className="min-h-screen bg-bg-primary">
+      <div className="min-h-screen bg-hero-gradient">
         <div className="mx-auto max-w-6xl px-6 py-8">
-          <div className="rounded-lg border border-error/30 bg-error/10 p-6">
-            <h2 className="font-medium text-error">Error Loading Tender</h2>
-            <p className="mt-2 text-sm text-text-secondary">{error}</p>
-            <button onClick={() => router.push("/")} className="mt-4 rounded-md bg-accent px-4 py-2 text-sm font-medium text-white hover:bg-accent-hover">
+          <div className="glass-card !border-red-500/30 rounded-xl p-6">
+            <h2 className="font-semibold text-red-400">Error Loading Tender</h2>
+            <p className="mt-2 text-sm text-gray-400">{error}</p>
+            <button onClick={() => router.push("/")} className="cta-button mt-4">
               Back to Home
             </button>
           </div>
@@ -1535,9 +1532,9 @@ export default function ReviewPage() {
   const currentPosition = currentBatchItem ? currentBatchItem.position + 1 : 0;
 
   return (
-    <div className="min-h-screen bg-bg-primary">
+    <div className="min-h-screen bg-hero-gradient">
       {/* Header - compact single row */}
-      <header className="sticky top-0 z-10 border-b border-border bg-bg-secondary">
+      <header className="sticky top-0 z-10 glass-card !rounded-none border-x-0 border-t-0">
         <div className="mx-auto max-w-6xl px-6 py-2">
           <div className="flex items-center justify-between gap-4">
             {/* Left side: Batch info (if in batch mode) OR just spacer */}
@@ -1636,7 +1633,7 @@ export default function ReviewPage() {
               <button
                 onClick={() => handleSave()}
                 disabled={!hasChanges && saveState !== "error"}
-                className="rounded-md bg-success px-3 py-1.5 text-xs font-medium text-white transition-colors hover:bg-success/90 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-lg bg-gradient-to-r from-green-500/80 to-green-600/80 px-4 py-1.5 text-xs font-semibold text-white transition-all hover:shadow-[0_0_20px_rgba(34,197,94,0.4)] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {saveState === "saving" ? (
                   <span className="flex items-center gap-1">
@@ -1776,7 +1773,7 @@ export default function ReviewPage() {
 
               <button
                 onClick={() => router.push("/")}
-                className="rounded-md border border-border px-2 py-1.5 text-xs font-medium text-text-primary hover:bg-bg-input flex items-center gap-1"
+                className="rounded-lg border border-white/10 px-3 py-1.5 text-xs font-medium text-gray-300 hover:border-cyan-400/30 hover:text-cyan-400 transition-all flex items-center gap-1"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h8.25" />
@@ -2022,7 +2019,7 @@ export default function ReviewPage() {
         <div className="grid gap-6 lg:grid-cols-[3fr_2fr]">
           {/* Left: Original Tender */}
           <div className="flex flex-col">
-            <h2 className="mb-3 text-lg font-medium text-text-primary">Original Tender</h2>
+            <h2 className="mb-3 text-lg font-semibold text-white">Original Tender</h2>
             <div className="flex-1 min-h-0">
               <OriginalTenderPanel
                 tender={tender}
@@ -2035,27 +2032,27 @@ export default function ReviewPage() {
           {/* Right: Editable Structured Fields */}
           <div className="flex flex-col h-[calc(100vh-180px)] min-h-[500px]">
             <div className="mb-3 flex items-center justify-between shrink-0">
-              <h2 className="text-lg font-medium text-text-primary">
+              <h2 className="text-lg font-semibold text-white">
                 {hasStructured ? "Structured Shipment" : "Extracted Fields"}
               </h2>
               {hasStructured && (
-                <div className="flex rounded-lg border border-border bg-bg-input p-0.5">
+                <div className="flex rounded-lg glass-card p-1">
                   <button
                     onClick={() => setViewMode("structured")}
-                    className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                    className={`rounded-md px-3 py-1 text-sm font-medium transition-all ${
                       viewMode === "structured"
-                        ? "bg-bg-secondary text-text-primary shadow-sm"
-                        : "text-text-muted hover:text-text-primary"
+                        ? "bg-cyan-500/20 text-cyan-400 shadow-sm"
+                        : "text-gray-400 hover:text-white"
                     }`}
                   >
                     Edit
                   </button>
                   <button
                     onClick={() => setViewMode("raw")}
-                    className={`rounded-md px-3 py-1 text-sm font-medium transition-colors ${
+                    className={`rounded-md px-3 py-1 text-sm font-medium transition-all ${
                       viewMode === "raw"
-                        ? "bg-bg-secondary text-text-primary shadow-sm"
-                        : "text-text-muted hover:text-text-primary"
+                        ? "bg-cyan-500/20 text-cyan-400 shadow-sm"
+                        : "text-gray-400 hover:text-white"
                     }`}
                   >
                     Raw ({candidates.length})
