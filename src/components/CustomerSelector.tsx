@@ -100,12 +100,12 @@ export function CustomerSelector({
 
   return (
     <div ref={containerRef} className={`relative ${className}`}>
-      {/* Search Input */}
+      {/* Search Input - Glassmorphic */}
       <div
         className={`
-          flex items-center gap-2 px-3 py-2 rounded-xl border bg-bg-secondary
-          cursor-text transition-all duration-200
-          ${isOpen ? "border-accent ring-2 ring-accent/20" : "border-border hover:border-text-muted/50"}
+          flex items-center gap-3 px-4 py-3 rounded-xl glass-card
+          cursor-text transition-all duration-300
+          ${isOpen ? "!border-cyan-400/30 shadow-[0_0_20px_rgba(0,240,255,0.1)]" : "hover:!border-white/15"}
         `}
         onClick={() => {
           setIsOpen(true);
@@ -113,7 +113,7 @@ export function CustomerSelector({
         }}
       >
         <svg
-          className="w-4 h-4 text-text-muted shrink-0"
+          className={`w-5 h-5 shrink-0 transition-all duration-300 ${isOpen ? "text-cyan-400 drop-shadow-[0_0_8px_rgba(0,240,255,0.5)]" : "text-gray-500"}`}
           fill="none"
           viewBox="0 0 24 24"
           stroke="currentColor"
@@ -132,7 +132,7 @@ export function CustomerSelector({
           onChange={(e) => setSearchQuery(e.target.value)}
           onFocus={() => setIsOpen(true)}
           placeholder="Search customer..."
-          className="flex-1 bg-transparent text-sm text-text-primary placeholder:text-text-muted focus:outline-none min-w-0"
+          className="flex-1 bg-transparent text-base text-white placeholder:text-gray-500 focus:outline-none min-w-0"
         />
         {selectedCustomer && !isOpen && (
           <button
@@ -140,7 +140,7 @@ export function CustomerSelector({
               e.stopPropagation();
               handleSelect(null);
             }}
-            className="p-0.5 rounded hover:bg-bg-input text-text-muted hover:text-text-primary"
+            className="p-1 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
           >
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -149,17 +149,17 @@ export function CustomerSelector({
         )}
       </div>
 
-      {/* Dropdown */}
+      {/* Dropdown - Glassmorphic */}
       {isOpen && (
-        <div className="absolute z-50 top-full left-0 right-0 mt-1 bg-bg-secondary border border-border rounded-xl shadow-lg max-h-80 overflow-auto">
+        <div className="absolute z-50 top-full left-0 right-0 mt-2 glass-card rounded-xl shadow-2xl max-h-80 overflow-auto">
           {loading ? (
-            <div className="px-4 py-3 text-sm text-text-muted">Loading customers...</div>
+            <div className="px-4 py-4 text-sm text-gray-400">Loading customers...</div>
           ) : (
             <>
               {/* Recent customers (when no search) */}
               {recentCustomers.length > 0 && !searchQuery.trim() && (
                 <div>
-                  <div className="px-3 py-2 text-xs font-medium text-text-muted uppercase tracking-wide">
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     Recently Selected
                   </div>
                   {recentCustomers.map((customer) => (
@@ -170,7 +170,7 @@ export function CustomerSelector({
                       onClick={() => handleSelect(customer)}
                     />
                   ))}
-                  <div className="border-t border-border my-1" />
+                  <div className="border-t border-white/5 my-1" />
                 </div>
               )}
 
@@ -178,7 +178,7 @@ export function CustomerSelector({
               {searchQuery.trim() && (
                 filteredCustomers.length > 0 ? (
                   <div>
-                    <div className="px-3 py-2 text-xs font-medium text-text-muted uppercase tracking-wide">
+                    <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                       Results
                     </div>
                     {filteredCustomers.map((customer) => (
@@ -192,7 +192,7 @@ export function CustomerSelector({
                     ))}
                   </div>
                 ) : (
-                  <div className="px-4 py-3 text-sm text-text-muted">
+                  <div className="px-4 py-4 text-sm text-gray-400">
                     No customers found for "{searchQuery}"
                   </div>
                 )
@@ -201,7 +201,7 @@ export function CustomerSelector({
               {/* All customers (when no search and no recents) */}
               {!searchQuery.trim() && recentCustomers.length === 0 && customers.length > 0 && (
                 <div>
-                  <div className="px-3 py-2 text-xs font-medium text-text-muted uppercase tracking-wide">
+                  <div className="px-4 py-2 text-xs font-semibold text-gray-500 uppercase tracking-wider">
                     All Customers
                   </div>
                   {customers.slice(0, 10).map((customer) => (
@@ -216,10 +216,10 @@ export function CustomerSelector({
               )}
 
               {/* No customer option */}
-              <div className="border-t border-border mt-1 pt-1">
+              <div className="border-t border-white/5 mt-1 pt-1">
                 <button
                   onClick={() => handleSelect(null)}
-                  className="w-full px-3 py-2 text-left text-sm text-text-muted hover:bg-bg-input transition-colors"
+                  className="w-full px-4 py-3 text-left text-sm text-gray-400 hover:bg-white/5 hover:text-gray-300 transition-colors"
                 >
                   No customer (parse without rules)
                 </button>
@@ -251,7 +251,7 @@ function CustomerOption({
     return (
       <>
         {text.slice(0, idx)}
-        <span className="font-semibold text-accent">{text.slice(idx, idx + searchQuery.length)}</span>
+        <span className="font-semibold text-cyan-400">{text.slice(idx, idx + searchQuery.length)}</span>
         {text.slice(idx + searchQuery.length)}
       </>
     );
@@ -261,26 +261,26 @@ function CustomerOption({
     <button
       onClick={onClick}
       className={`
-        w-full px-3 py-2 text-left flex items-center gap-3 transition-colors
-        ${isSelected ? "bg-accent/10" : "hover:bg-bg-input"}
+        w-full px-4 py-3 text-left flex items-center gap-3 transition-all duration-200
+        ${isSelected ? "bg-cyan-500/10" : "hover:bg-white/5"}
       `}
     >
       {/* Avatar placeholder */}
-      <div className="w-8 h-8 rounded-full bg-accent/20 flex items-center justify-center text-accent text-xs font-medium shrink-0">
+      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-cyan-500/30 to-cyan-500/10 flex items-center justify-center text-cyan-400 text-xs font-bold shrink-0 border border-cyan-500/20">
         {customer.name.slice(0, 2).toUpperCase()}
       </div>
       <div className="min-w-0 flex-1">
-        <div className="text-sm font-medium text-text-primary truncate">
+        <div className="text-sm font-medium text-white truncate">
           {highlightMatch(customer.name)}
         </div>
         {customer.code && (
-          <div className="text-xs text-text-muted">
+          <div className="text-xs text-gray-500">
             {highlightMatch(customer.code)}
           </div>
         )}
       </div>
       {isSelected && (
-        <svg className="w-4 h-4 text-accent shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <svg className="w-5 h-5 text-cyan-400 icon-glow shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
         </svg>
       )}

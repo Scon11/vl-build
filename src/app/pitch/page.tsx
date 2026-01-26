@@ -25,89 +25,116 @@ export default function PitchPage() {
   };
 
   return (
-    <div className="min-h-screen bg-bg-primary flex flex-col">
+    <div className="min-h-screen bg-hero-gradient flex flex-col">
       {/* Header with back nav */}
-      <header className="w-full px-4 py-4">
-        <div className="max-w-4xl mx-auto flex items-center justify-between">
+      <header className="w-full px-6 py-5">
+        <div className="max-w-5xl mx-auto flex items-center justify-between">
           <Link 
             href="/" 
-            className="flex items-center gap-2 text-text-secondary hover:text-text-primary transition-colors"
+            className="flex items-center gap-2 text-gray-500 hover:text-cyan-400 transition-colors group"
           >
-            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg className="w-4 h-4 group-hover:drop-shadow-[0_0_8px_rgba(0,240,255,0.5)] transition-all" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
-            <span className="text-sm">VL Suite</span>
+            <span className="text-sm font-medium">VL Suite</span>
           </Link>
         </div>
       </header>
 
-      {/* Centered content */}
-      <main className="flex-1 flex flex-col items-center justify-center px-4 py-8">
-        {/* Header */}
-        <div className="w-full max-w-2xl px-4 mb-8">
-          <div className="flex items-center justify-center gap-4 mb-3">
-            <div className="w-12 h-12 rounded-xl bg-accent/10 flex items-center justify-center">
-              <svg className="w-6 h-6 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
-            <h1 className="font-[family-name:var(--font-inter)] text-3xl font-normal tracking-tight text-text-primary">
+      {/* Centered content with breathing room */}
+      <main className="flex-1 flex flex-col items-center justify-center px-6 py-12">
+        {/* Logo + Title with glow animation */}
+        <div className="w-full max-w-2xl px-4 mb-10">
+          <div className="flex items-center justify-center gap-5 mb-4">
+            <Image
+              src="/logo.png"
+              alt="VL Pitch Logo"
+              width={72}
+              height={72}
+              priority
+              className="shrink-0 animate-logo-glow"
+            />
+            <h1 
+              className="font-[family-name:var(--font-inter)] text-5xl md:text-6xl font-black tracking-tight text-white animate-text-glow"
+              style={{ letterSpacing: '-0.03em' }}
+            >
               VL Pitch
             </h1>
           </div>
-          <p className="text-center text-text-secondary">
+          <p className="text-center text-gray-400 text-lg">
             Enter a prospect&apos;s domain to generate sales intelligence
           </p>
         </div>
 
-        {/* Domain Input */}
-        <form onSubmit={handleSubmit} className="w-full max-w-xl px-4">
+        {/* Domain Input - Glassmorphic */}
+        <form onSubmit={handleSubmit} className="w-full max-w-xl px-4 animate-fade-in-up animation-delay-300">
           <div className="relative">
-            <input
-              type="text"
-              value={domain}
-              onChange={(e) => setDomain(e.target.value)}
-              placeholder="sysco.com"
-              disabled={isLoading}
-              className="w-full bg-bg-secondary border border-border rounded-xl px-5 py-4 text-lg text-text-primary placeholder:text-text-muted focus:outline-none focus:border-accent focus:ring-1 focus:ring-accent transition-all disabled:opacity-50"
-              autoFocus
-            />
-            <button
-              type="submit"
-              disabled={!domain.trim() || isLoading}
-              className="absolute right-2 top-1/2 -translate-y-1/2 bg-accent hover:bg-accent-hover disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-            >
-              {isLoading ? (
-                <>
-                  <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+            <div className={`
+              glass-card rounded-2xl p-2 transition-all duration-300
+              ${isLoading ? 'opacity-70' : ''}
+            `}>
+              <div className="flex items-center gap-3">
+                {/* Search icon with glow */}
+                <div className="pl-4">
+                  <svg 
+                    className="w-6 h-6 text-cyan-400 icon-glow" 
+                    fill="none" 
+                    viewBox="0 0 24 24" 
+                    stroke="currentColor"
+                    strokeWidth={1.5}
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
                   </svg>
-                  Analyzing...
-                </>
-              ) : (
-                <>
-                  Analyze
-                  <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
-                  </svg>
-                </>
-              )}
-            </button>
+                </div>
+                
+                <input
+                  type="text"
+                  value={domain}
+                  onChange={(e) => setDomain(e.target.value)}
+                  placeholder="sysco.com"
+                  disabled={isLoading}
+                  className="flex-1 bg-transparent text-xl text-white placeholder:text-gray-500 focus:outline-none py-4 font-medium"
+                  autoFocus
+                />
+                
+                <button
+                  type="submit"
+                  disabled={!domain.trim() || isLoading}
+                  className="cta-button disabled:opacity-40 disabled:cursor-not-allowed mr-2"
+                >
+                  {isLoading ? (
+                    <>
+                      <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                      </svg>
+                      Analyzing...
+                    </>
+                  ) : (
+                    <>
+                      Analyze
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
+                      </svg>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </form>
 
-        {/* Recent Analyses - placeholder for future */}
-        <div className="w-full max-w-xl px-4 mt-12">
-          <p className="text-center text-text-muted text-sm">
-            Enter a company domain like <span className="text-text-secondary">sysco.com</span> or <span className="text-text-secondary">kochfoods.com</span>
+        {/* Helper text */}
+        <div className="w-full max-w-xl px-4 mt-8 animate-fade-in-up animation-delay-500">
+          <p className="text-center text-gray-500 text-sm">
+            Enter a company domain like <span className="text-gray-400">sysco.com</span> or <span className="text-gray-400">kochfoods.com</span>
           </p>
         </div>
       </main>
 
       {/* Footer */}
-      <footer className="py-4 text-center">
-        <p className="text-xs text-text-muted">
+      <footer className="py-6 text-center">
+        <p className="text-sm text-gray-600">
           Sales intelligence powered by AI
         </p>
       </footer>

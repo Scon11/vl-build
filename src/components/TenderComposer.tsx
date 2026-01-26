@@ -244,7 +244,7 @@ export function TenderComposer() {
 
   return (
     <div
-      className="relative flex flex-col items-center w-full max-w-2xl mx-auto px-4"
+      className="relative flex flex-col items-center w-full max-w-2xl mx-auto px-4 animate-fade-in-up animation-delay-300"
       onDragEnter={handleDrag}
       onDragLeave={handleDrag}
       onDragOver={handleDrag}
@@ -252,15 +252,15 @@ export function TenderComposer() {
     >
       {/* Batch files display (multiple files) */}
       {isBatchMode && (
-        <div className="w-full mb-2">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-medium text-text-primary">
+        <div className="w-full mb-4">
+          <div className="flex items-center justify-between mb-3">
+            <span className="text-sm font-semibold text-white">
               Batch Upload: {attachedFiles.length} files
             </span>
             <button
               onClick={removeAttachments}
               disabled={submitState === "submitting"}
-              className="text-xs text-text-muted hover:text-error transition-colors"
+              className="text-xs text-gray-400 hover:text-red-400 transition-colors"
             >
               Clear all
             </button>
@@ -269,25 +269,25 @@ export function TenderComposer() {
             {attachedFiles.map((file, idx) => (
               <div
                 key={idx}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-bg-secondary border border-border rounded text-xs"
+                className="inline-flex items-center gap-1 px-3 py-1.5 glass-card rounded-lg text-xs"
               >
-                <span className="truncate max-w-[120px]">{file.name}</span>
-                <span className="text-text-muted">({formatFileSize(file.size)})</span>
+                <span className="truncate max-w-[120px] text-gray-300">{file.name}</span>
+                <span className="text-gray-500">({formatFileSize(file.size)})</span>
               </div>
             ))}
           </div>
           {batchProgress && (
-            <p className="mt-2 text-sm text-accent">{batchProgress}</p>
+            <p className="mt-3 text-sm text-cyan-400 icon-glow">{batchProgress}</p>
           )}
         </div>
       )}
 
       {/* Single file attachment chip */}
       {attachedFiles.length === 1 && (
-        <div className="w-full mb-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-bg-secondary border border-border rounded-full text-sm">
+        <div className="w-full mb-4">
+          <div className="inline-flex items-center gap-2 px-4 py-2 glass-card rounded-full text-sm">
             <svg
-              className="w-4 h-4 text-accent shrink-0"
+              className="w-4 h-4 text-cyan-400 icon-glow shrink-0"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -299,16 +299,16 @@ export function TenderComposer() {
                 d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"
               />
             </svg>
-            <span className="text-text-primary truncate max-w-[200px]">
+            <span className="text-gray-200 truncate max-w-[200px]">
               {attachedFiles[0].name}
             </span>
-            <span className="text-text-muted">
+            <span className="text-gray-500">
               ({formatFileSize(attachedFiles[0].size)})
             </span>
             <button
               onClick={removeAttachments}
               disabled={submitState === "submitting"}
-              className="p-0.5 rounded hover:bg-bg-input text-text-muted hover:text-text-primary transition-colors"
+              className="p-1 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-colors"
               aria-label="Remove attachment"
             >
               <svg
@@ -327,106 +327,32 @@ export function TenderComposer() {
             </button>
           </div>
           {text.trim() && (
-            <p className="mt-1 text-xs text-text-muted">
+            <p className="mt-2 text-xs text-gray-500">
               File will be processed. Text input will be ignored.
             </p>
           )}
         </div>
       )}
 
-      {/* Main input bar */}
+      {/* Main input bar - Glassmorphic */}
       <div
         className={`
-          relative w-full flex items-end gap-2 
-          bg-bg-secondary border rounded-2xl 
-          px-3 py-2 transition-all duration-200
-          ${dragActive
-            ? "border-accent ring-2 ring-accent/20 bg-accent/5"
-            : "border-border hover:border-text-muted/50"
-          }
+          relative w-full glass-card rounded-2xl p-2 transition-all duration-300
+          ${dragActive ? "!border-cyan-400/50 !shadow-[0_0_40px_rgba(0,240,255,0.2)]" : ""}
           ${submitState === "submitting" ? "opacity-70" : ""}
         `}
       >
-        {/* Paperclip button - opens file picker with multi-select */}
-        <button
-          onClick={handlePaperclipClick}
-          disabled={submitState === "submitting"}
-          className="p-2 rounded-lg text-text-muted hover:text-text-primary hover:bg-bg-input transition-colors shrink-0 disabled:opacity-50"
-          aria-label="Attach files"
-          title="Attach files (select multiple with Ctrl/Cmd)"
-        >
-          <svg
-            className="w-5 h-5"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
+        <div className="flex items-end gap-2">
+          {/* Paperclip button - opens file picker with multi-select */}
+          <button
+            onClick={handlePaperclipClick}
+            disabled={submitState === "submitting"}
+            className="p-3 rounded-xl text-gray-400 hover:text-cyan-400 hover:bg-white/5 transition-all shrink-0 disabled:opacity-50 group"
+            aria-label="Attach files"
+            title="Attach files (select multiple with Ctrl/Cmd)"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={1.5}
-              d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
-            />
-          </svg>
-        </button>
-
-        {/* Hidden file input with multiple support */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".pdf,.docx,.txt"
-          multiple
-          onChange={handleInputChange}
-          className="hidden"
-          aria-hidden="true"
-        />
-
-        {/* Auto-sizing textarea */}
-        <textarea
-          ref={textareaRef}
-          value={text}
-          onChange={(e) => setText(e.target.value)}
-          onKeyDown={handleKeyDown}
-          placeholder="Paste email text or drop a tender file…"
-          disabled={submitState === "submitting"}
-          className="flex-1 resize-none bg-transparent text-text-primary placeholder:text-text-muted focus:outline-none py-2 min-h-[24px] max-h-[260px] text-sm leading-relaxed"
-          rows={1}
-          aria-label="Tender text input"
-        />
-
-        {/* Send button */}
-        <button
-          onClick={handleSubmit}
-          disabled={!canSubmit()}
-          className={`
-            p-2 rounded-lg shrink-0 transition-all duration-200
-            ${canSubmit()
-              ? "bg-accent text-white hover:bg-accent-hover"
-              : "bg-bg-input text-text-muted cursor-not-allowed"
-            }
-            disabled:opacity-50
-          `}
-          aria-label="Submit tender"
-        >
-          {submitState === "submitting" ? (
-            <svg className="w-5 h-5 animate-spin" viewBox="0 0 24 24" fill="none">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
-              />
-            </svg>
-          ) : (
             <svg
-              className="w-5 h-5"
+              className="w-6 h-6 group-hover:drop-shadow-[0_0_8px_rgba(0,240,255,0.5)] transition-all"
               fill="none"
               viewBox="0 0 24 24"
               stroke="currentColor"
@@ -434,16 +360,87 @@ export function TenderComposer() {
               <path
                 strokeLinecap="round"
                 strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5 10l7-7m0 0l7 7m-7-7v18"
+                strokeWidth={1.5}
+                d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13"
               />
             </svg>
-          )}
-        </button>
+          </button>
+
+          {/* Hidden file input with multiple support */}
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".pdf,.docx,.txt"
+            multiple
+            onChange={handleInputChange}
+            className="hidden"
+            aria-hidden="true"
+          />
+
+          {/* Auto-sizing textarea */}
+          <textarea
+            ref={textareaRef}
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder="Paste email text or drop a tender file…"
+            disabled={submitState === "submitting"}
+            className="flex-1 resize-none bg-transparent text-white placeholder:text-gray-500 focus:outline-none py-3 min-h-[28px] max-h-[260px] text-base leading-relaxed"
+            rows={1}
+            aria-label="Tender text input"
+          />
+
+          {/* Send button */}
+          <button
+            onClick={handleSubmit}
+            disabled={!canSubmit()}
+            className={`
+              p-3 rounded-xl shrink-0 transition-all duration-300 group
+              ${canSubmit()
+                ? "bg-gradient-to-br from-cyan-500/20 to-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:border-cyan-400/50 hover:shadow-[0_0_30px_rgba(0,240,255,0.3)] hover:scale-105"
+                : "bg-white/5 text-gray-600 cursor-not-allowed"
+              }
+              disabled:opacity-50
+            `}
+            aria-label="Submit tender"
+          >
+            {submitState === "submitting" ? (
+              <svg className="w-6 h-6 animate-spin" viewBox="0 0 24 24" fill="none">
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                />
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                />
+              </svg>
+            ) : (
+              <svg
+                className="w-6 h-6 group-hover:drop-shadow-[0_0_8px_rgba(0,240,255,0.5)] transition-all"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M5 10l7-7m0 0l7 7m-7-7v18"
+                />
+              </svg>
+            )}
+          </button>
+        </div>
       </div>
 
-      {/* Customer selector - below the input bar, narrower and centered */}
-      <div className="w-full sm:w-2/3 max-w-md mt-4 mx-auto">
+      {/* Customer selector - below the input bar */}
+      <div className="w-full sm:w-2/3 max-w-md mt-6 mx-auto animate-fade-in-up animation-delay-500">
         <CustomerSelector
           selectedCustomerId={selectedCustomerId}
           onSelect={setSelectedCustomerId}
@@ -453,7 +450,7 @@ export function TenderComposer() {
 
       {/* Error message */}
       {errorMessage && (
-        <div className="mt-3 w-full px-4 py-2 rounded-lg bg-error/10 border border-error/20 text-sm text-error">
+        <div className="mt-4 w-full px-4 py-3 rounded-xl glass-card !border-red-500/30 text-sm text-red-400">
           {errorMessage}
         </div>
       )}
@@ -461,7 +458,8 @@ export function TenderComposer() {
       {/* Drag overlay indicator */}
       {dragActive && (
         <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-          <div className="absolute inset-0 bg-accent/5 rounded-2xl border-2 border-dashed border-accent" />
+          <div className="absolute inset-0 bg-cyan-500/5 rounded-2xl border-2 border-dashed border-cyan-400/50" />
+          <div className="text-cyan-400 font-medium text-lg icon-glow">Drop files here</div>
         </div>
       )}
     </div>
