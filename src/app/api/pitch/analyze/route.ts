@@ -250,97 +250,159 @@ async function analyzeWithGPT(
   let context = "";
 
   if (apollo) {
-    context += `\nAPOLLO DATA:\n- Company: ${apollo.name}\n- Industry: ${apollo.industry}\n- Employees: ${apollo.employeeCount}\n`;
+    context += `\nAPOLLO DATA:\n- Company: ${apollo.name}\n- Industry: ${apollo.industry}\n- Employees: ${apollo.employeeCount}\n- Founded: ${apollo.foundedYear}\n- Description: ${apollo.description}\n`;
   }
 
   if (hubspot?.exists) {
-    context += `\nHUBSPOT: Company exists as "${hubspot.companyName}"\n`;
+    context += `\nHUBSPOT: Company exists as "${hubspot.companyName}" (ID: ${hubspot.companyId})\n- Existing deals: ${hubspot.existingDeals?.length || 0}\n- Existing contacts: ${hubspot.existingContacts?.length || 0}\n`;
+  } else {
+    context += `\nHUBSPOT: Net new prospect (not in CRM)\n`;
   }
 
-  const prompt = `You are a sales intelligence analyst for Vantage Logistics, a freight brokerage specializing in temperature-controlled (reefer), flatbed, and specialized freight.
+  const prompt = `You are a sales execution coach embedded in a tool for Vantage Logistics reps. Your job is to generate ACTIONABLE outputs that a rep can use to make a call within 5 minutes.
 
-VANTAGE'S SELLING STYLE:
-- Consultative, problem-led approach (Mike Weinberg methodology)
-- Lead with customer pain, not product features
-- Power Statement: "We work with [TYPE] who are frustrated by [PROBLEM]. We help by [SOLUTION], which leads to [RESULT]."
+=== VANTAGE SALES TRAINING (SOURCE OF TRUTH) ===
 
-VANTAGE'S STRENGTHS:
-- Temperature-controlled freight expertise (food, produce, pharma)
-- Flatbed and specialized freight (steel, lumber, machinery, oversized)
+POWER STATEMENT STRUCTURE (MANDATORY):
+"I work with [TYPE OF CUSTOMER] who are frustrated by [SPECIFIC PROBLEM]. We help by [SPECIFIC FIX], which leads to [BUSINESS OUTCOME]."
+
+OBJECTION HANDLING STYLE:
+- "We already have a provider" → "Totally understand — most of our customers did too. We usually come in when performance issues or specialized lanes pop up. Would it be worth seeing if there's a gap?"
+- "Not interested" → "I get it. Just curious — what's working well for you right now?"
+- "Send me an email" → "Happy to. Just so I'm not spamming you — what would actually make it worth opening?"
+- "We're not onboarding" → "That's fair. We play the long game — this would just be a 15-minute intro. Would [DAY] work?"
+
+KEY PRINCIPLES:
+- Calling too low in the organization kills deals
+- Lead with pain, not product features
+- No "full-service logistics provider" language
+- Sound like a human, not a brochure
+- Ask for the meeting up to three times
+
+VANTAGE STRENGTHS:
+- Temperature-controlled freight (food, produce, pharma)
+- Flatbed and specialized (steel, lumber, machinery, oversized)
 - Dedicated capacity and carrier networks
 - Real-time visibility and proactive communication
-- Midwest hub with East Coast, Southern, and Western lanes
+- Midwest hub with national coverage
 
-EQUIPMENT MATCHING (CRITICAL - match to actual products):
-- Food/Produce/Pharma/Chemicals → Reefer (temperature-controlled)
-- Steel/Metal/Barriers/Machinery/Lumber/Building Materials → Flatbed, Step Deck
-- Oversized/Heavy Equipment → RGN, Lowboy, Specialized
-- General Packaged Goods/Palletized → Dry Van
-- Mixed or Weather-Sensitive non-temp → Conestoga, Curtainside
-- DO NOT suggest temperature-controlled equipment unless the company actually ships perishables
+EQUIPMENT MATCHING (CRITICAL):
+- Food/Produce/Pharma → Reefer
+- Steel/Metal/Machinery/Lumber/Building Materials → Flatbed, Step Deck
+- Oversized/Heavy → RGN, Lowboy, Specialized
+- General Packaged/Palletized → Dry Van
+- DO NOT suggest reefer unless they ship perishables
 
 ${context}
 
 WEBSITE CONTENT:
-${websiteData.rawText.substring(0, 20000)}
+${websiteData.rawText.substring(0, 18000)}
 
 ---
 
-FIRST: Identify what this company manufactures/sells/ships. Match equipment to their actual products.
+ANALYZE THIS PROSPECT AND OUTPUT EXECUTION-READY JSON:
 
-Analyze and respond in JSON:
 {
-  "commodityAnalysis": {
-    "products": ["what they make/sell"],
-    "likelyCommodities": ["what they actually ship"],
-    "equipmentNeeded": ["Flatbed", "Step Deck", etc - match to products],
-    "equipmentNOTNeeded": ["Reefer", etc - exclude irrelevant types],
-    "reasoning": "Why these equipment types"
+  "summary": {
+    "oneLiner": "[COMPANY] is a [SIZE] [INDUSTRY] company shipping [COMMODITIES] via [EQUIPMENT].",
+    "painSignal": "Primary pain indicator from research",
+    "fitScore": 8,
+    "fitRationale": "One sentence on why this score"
   },
-  "positioning": {
-    "summary": "2-3 sentence explanation",
-    "operationalPriorities": ["priority 1", "priority 2", "priority 3"],
-    "likelyPainPoints": ["pain 1", "pain 2", "pain 3"],
-    "logisticsRiskAreas": ["risk 1", "risk 2"]
+  
+  "whoToCall": {
+    "primary": {
+      "title": "VP of Operations or Supply Chain Director",
+      "why": "Owns logistics decisions, feels delivery pain directly"
+    },
+    "secondary": {
+      "title": "Plant Manager or Logistics Coordinator", 
+      "why": "Operational insight, can validate pain and champion internally"
+    },
+    "avoid": {
+      "title": "Purchasing / Procurement",
+      "why": "Often gatekeeps without authority, focuses on price not value"
+    },
+    "coachingNote": "Brief note on how to approach based on org structure"
   },
-  "talkingPoints": [
-    {"angle": "Brief angle", "opener": "We work with...", "followUp": "Curious how..."}
-  ],
+  
+  "scripts": {
+    "coldCall": "Hi [NAME], this is [REP] with Vantage Logistics. I work with [TYPE] who are frustrated by [SPECIFIC PROBLEM]. We help by [SPECIFIC FIX], which leads to [OUTCOME]. Would 15 minutes make sense to see if there's a fit?",
+    "voicemail": "Hi [NAME], [REP] with Vantage. I work with [TYPE] dealing with [PAIN]. We've helped similar companies [RESULT]. Worth a quick call — I'll try you again [DAY], or reach me at [NUMBER].",
+    "emailSubject": "Pain-focused subject line, no fluff",
+    "emailBody": "Keep under 75 words. One sentence on observed pain. Power statement. Ask for 15 minutes."
+  },
+  
   "objections": [
-    {"objection": "The objection", "likelihood": "high|medium|low", "response": "Reframe"}
+    {
+      "objection": "We already have a provider",
+      "sayThis": "Totally understand — most of our [INDUSTRY] customers did too. We usually come in when [SPECIFIC SITUATION]. Would it be worth a quick look to see if there's a gap?",
+      "toneNote": "Casual confidence. Position as backup, not replacement."
+    },
+    {
+      "objection": "[PROSPECT-SPECIFIC OBJECTION based on their situation]",
+      "sayThis": "[CUSTOM REFRAME]",
+      "toneNote": "[WHY this objection is likely and how to handle tone]"
+    }
   ],
-  "websiteFeedback": {
-    "messagingGaps": ["gap 1"],
-    "logisticsMaturity": "sophisticated|basic|absent",
-    "outreachDifficulty": "easy|medium|hard",
-    "explanation": "Why"
+  
+  "nextActions": {
+    "primary": {
+      "channel": "Phone",
+      "why": "Brief reason this channel fits this prospect",
+      "doToday": "Specific task: find contact on LinkedIn, call main line, etc."
+    },
+    "secondary": {
+      "channel": "LinkedIn or Email",
+      "why": "Backup approach reason",
+      "doToday": "Specific task"
+    },
+    "cadence": [
+      "Day 1: Call + voicemail",
+      "Day 2: LinkedIn connect with personalized note",
+      "Day 3: Email using script above",
+      "Day 7: Call again",
+      "Day 10: Final email (closing the loop)"
+    ],
+    "ifNoResponse": "Park for 30 days, then restart sequence"
   },
-  "fitScore": {
-    "overall": 7,
-    "logisticsComplexity": "high|medium|low",
-    "painSignalStrength": "high|medium|low",
-    "messagingMaturity": "sophisticated|generic|thin"
+  
+  "fitScoreBreakdown": {
+    "overall": 8,
+    "logisticsComplexity": "high",
+    "painSignalStrength": "high", 
+    "equipmentMatch": "strong",
+    "decisionMakerAccess": "medium",
+    "actionGuidance": "8-10 = Prioritize immediately, call today. 6-7 = Standard cadence. ≤5 = Nurture or park."
+  },
+  
+  "researchNotes": {
+    "companyOverview": "2-3 sentences about the company",
+    "products": ["what they make/sell"],
+    "commodities": ["what they ship"],
+    "equipmentNeeded": ["Flatbed", "Step Deck"],
+    "equipmentNotNeeded": ["Reefer"],
+    "logisticsSignals": ["any mentions of shipping, supply chain, growth, pain"],
+    "websiteMaturity": "sophisticated|basic|absent"
   }
 }
 
 CRITICAL RULES:
-1. Identify actual products/commodities FIRST
-2. Only recommend equipment that matches what they ship
-3. Steel/metal products = flatbed, NOT reefer
-4. Food/produce = reefer
-5. Talking points must reference appropriate equipment for THEIR products
-6. Never suggest temp-controlled for non-perishable goods
-
-Provide 3-4 talking points and 2-3 objections. Be specific to this company.`;
+1. Scripts must be VERBATIM — reps read them word for word
+2. Power statement structure is mandatory for all scripts
+3. Objection responses must be conversational, not corporate
+4. Match equipment to actual products (steel = flatbed, NOT reefer)
+5. Every section must drive ACTION, not just insight
+6. If a rep reads this and wonders "what should I do?" — you failed`;
 
   const response = await client.chat.completions.create({
     model: "gpt-4o",
     messages: [
-      { role: "system", content: "Respond with valid JSON only." },
+      { role: "system", content: "You are a sales execution coach. Respond with valid JSON only. Every output must drive immediate action — if a rep reads it and wonders 'what should I do?', you failed." },
       { role: "user", content: prompt },
     ],
     temperature: 0.7,
-    max_tokens: 4000,
+    max_tokens: 5000,
   });
 
   const text = response.choices[0]?.message?.content || "";
