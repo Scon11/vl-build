@@ -1,6 +1,19 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createServerClient, type CookieOptions } from "@supabase/ssr";
-import { isAdmin, isAllowedDomain } from "@/lib/auth-config";
+
+// Inline auth config to avoid import issues in middleware
+const ALLOWED_DOMAIN = "vantagelgs.com";
+const ADMIN_EMAILS = ["sconley@vantagelgs.com"];
+
+function isAllowedDomain(email: string): boolean {
+  const domain = email.split("@")[1]?.toLowerCase();
+  return domain === ALLOWED_DOMAIN;
+}
+
+function isAdmin(email: string | undefined | null): boolean {
+  if (!email) return false;
+  return ADMIN_EMAILS.includes(email.toLowerCase());
+}
 
 // Routes that don't require authentication
 const publicRoutes = ["/login", "/auth"];
