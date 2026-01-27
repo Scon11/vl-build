@@ -3,6 +3,7 @@
 import { Suspense, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { createClient } from "@/lib/supabase/browser";
+import { isAllowedDomain, ALLOWED_DOMAIN } from "@/lib/auth-config";
 
 type AuthMode = "login" | "signup";
 
@@ -29,6 +30,11 @@ function LoginForm() {
 
     try {
       if (mode === "signup") {
+        // Validate domain for signup
+        if (!isAllowedDomain(email)) {
+          throw new Error(`Only @${ALLOWED_DOMAIN} email addresses are allowed.`);
+        }
+
         const { error } = await supabase.auth.signUp({
           email,
           password,
@@ -44,6 +50,11 @@ function LoginForm() {
         setMessage("Check your email for the confirmation link.");
         setMode("login");
       } else {
+        // Validate domain for login too
+        if (!isAllowedDomain(email)) {
+          throw new Error(`Only @${ALLOWED_DOMAIN} email addresses are allowed.`);
+        }
+
         const { error } = await supabase.auth.signInWithPassword({
           email,
           password,
@@ -147,7 +158,7 @@ function LoginForm() {
                 onChange={(e) => setEmail(e.target.value)}
                 required
                 className="w-full rounded-md border border-border bg-bg-input px-3 py-2 text-text-primary placeholder:text-text-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent"
-                placeholder="you@company.com"
+                placeholder="you@vantagelgs.com"
               />
             </div>
 
