@@ -15,7 +15,9 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     
     if (!error) {
-      return NextResponse.redirect(`${origin}${next}`);
+      // Redirect to confirmation page instead of directly to app
+      // This gives users clear feedback that verification worked
+      return NextResponse.redirect(`${origin}/auth/confirm`);
     }
   }
 

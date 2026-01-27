@@ -1,10 +1,44 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { TenderComposer } from "@/components/TenderComposer";
 import Image from "next/image";
 import Link from "next/link";
+import { createClient } from "@/lib/supabase/browser";
+import { isAdmin } from "@/lib/auth-config";
 
 export default function BuildPage() {
+  const router = useRouter();
+  const [authorized, setAuthorized] = useState(false);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      const supabase = createClient();
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user || !isAdmin(user.email)) {
+        // Not admin, redirect to home
+        router.replace("/");
+        return;
+      }
+      
+      setAuthorized(true);
+      setLoading(false);
+    };
+
+    checkAdmin();
+  }, [router]);
+
+  if (loading || !authorized) {
+    return (
+      <div className="min-h-screen bg-hero-gradient flex items-center justify-center">
+        <div className="w-12 h-12 rounded-full border-4 border-cyan-400 border-t-transparent animate-spin" />
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-hero-gradient flex flex-col">
       {/* Header with back nav */}
